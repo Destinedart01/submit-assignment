@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Account — Assignment Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="auth-page">
+  <div class="auth-card" style="max-width:480px;">
+    <h1>Create Student Account</h1>
+    <p class="sub">Lecturer and admin accounts are created by the administrator.</p>
+
+    <form id="regForm">
+      <div class="field-row">
+        <div>
+          <label for="first_name">First name</label>
+          <input type="text" id="first_name" required>
+        </div>
+        <div>
+          <label for="surname">Surname</label>
+          <input type="text" id="surname" required>
+        </div>
+      </div>
+
+      <label for="student_no">Student number</label>
+      <input type="text" id="student_no" required>
+
+      <div class="field-row">
+        <div>
+          <label for="sex">Sex</label>
+          <select id="sex">
+            <option value="M">Male</option>
+            <option value="F">Female</option>
+          </select>
+        </div>
+        <div>
+          <label for="dob">Date of birth</label>
+          <input type="date" id="dob">
+        </div>
+      </div>
+
+      <label for="faculty_id">Faculty</label>
+      <select id="faculty_id"></select>
+
+      <label for="department_id">Department</label>
+      <select id="department_id"></select>
+
+      <label for="program_id">Program</label>
+      <select id="program_id"></select>
+
+      <label for="username">Username</label>
+      <input type="text" id="username" required>
+
+      <label for="password">Password</label>
+      <input type="password" id="password" required>
+
+      <button type="submit" class="primary" style="width:100%;">Register</button>
+    </form>
+
+    <div id="msg" class="msg" style="display:none;"></div>
+
+    <div class="auth-links">
+      Already registered? <a href="login.html">Sign in</a>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/register.js"></script>
+</body>
+</html>

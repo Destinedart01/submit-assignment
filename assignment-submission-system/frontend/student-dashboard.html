@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Dashboard — Assignment Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="topbar">
+    <h1 class="brand">Assignment Portal</h1>
+    <div style="display:flex; align-items:center; gap:12px;">
+      <span class="role-tag">STUDENT</span>
+      <button onclick="logout()">Log out</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="courses">Register Courses</button>
+      <button class="tab-btn" data-tab="assignments">Assignments</button>
+      <button class="tab-btn" data-tab="results">My Results</button>
+    </div>
+
+    <div id="msg" class="msg" style="display:none;"></div>
+
+    <!-- Course registration -->
+    <div class="tab-panel panel" id="tab-courses">
+      <h2>Register for a Course Unit</h2>
+      <form id="registerCourseForm">
+        <div class="field-row">
+          <div><label>Academic year</label><select id="regYearSel" required></select></div>
+          <div><label>Semester</label><select id="regSemesterSel" required></select></div>
+        </div>
+        <label>Course unit</label>
+        <select id="regUnitSel" required></select>
+        <button class="primary" type="submit">Register</button>
+      </form>
+
+      <h2 style="margin-top:28px;">My Registered Units</h2>
+      <table><thead><tr><th>Course</th><th>Unit</th><th>Status</th></tr></thead><tbody id="myCoursesTable"></tbody></table>
+    </div>
+
+    <!-- Assignments -->
+    <div class="tab-panel panel" id="tab-assignments" style="display:none;">
+      <h2>My Assignments</h2>
+      <table><thead><tr><th>Title</th><th>Course Unit</th><th>Due</th><th>Action</th></tr></thead><tbody id="assignmentTable"></tbody></table>
+
+      <div id="submitBox" style="display:none; margin-top:20px; border-top: var(--border); padding-top:16px;">
+        <h2 id="submitTitle">Submit Assignment</h2>
+        <form id="submitForm">
+          <label>Text answer (optional if uploading a file)</label>
+          <textarea id="textContent"></textarea>
+          <label>File (PDF, DOC, DOCX, TXT, or ZIP — optional if text provided)</label>
+          <input type="file" id="fileInput">
+          <button class="primary" type="submit">Submit assignment</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="tab-panel panel" id="tab-results" style="display:none;">
+      <h2>My Results</h2>
+      <table><thead><tr><th>Course Unit</th><th>Coursework</th><th>Exam</th><th>Total</th><th>Grade</th></tr></thead><tbody id="resultTable"></tbody></table>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/student.js"></script>
+</body>
+</html>
