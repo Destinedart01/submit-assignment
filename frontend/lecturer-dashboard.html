@@ -20,8 +20,9 @@
   <div class="wrap">
     <div class="tabs">
       <button class="tab-btn active" data-tab="assignments">My Assignments</button>
-      <button class="tab-btn" data-tab="submissions">Submissions & Grading</button>
-      <button class="tab-btn" data-tab="results">Enter Results</button>
+      <button class="tab-btn" data-tab="submissions">File Submissions & Grading</button>
+      <button class="tab-btn" data-tab="theory">Grade Theory Answers</button>
+      <button class="tab-btn" data-tab="results">Enter Course Results</button>
     </div>
 
     <div id="msg" class="msg" style="display:none;"></div>
@@ -32,25 +33,89 @@
       <form id="assignmentForm">
         <label>Course unit</label>
         <select id="unitSel" required></select>
+
         <label>Title</label>
         <input type="text" id="title" required>
+
         <label>Instructions</label>
         <textarea id="instructions"></textarea>
+
         <label>Due date</label>
         <input type="datetime-local" id="dueDate" required>
+
+        <label>Assignment type</label>
+        <select id="assignmentType">
+          <option value="file">File / text upload (student submits an answer file or text)</option>
+          <option value="form">Interactive form (objective and/or theory questions, auto-compiled)</option>
+        </select>
+
+        <div id="fileTypeFields">
+          <label>Attach a brief/handout file (optional)</label>
+          <input type="file" id="briefFile">
+          <label>Max score (optional, for your own grading reference)</label>
+          <input type="number" step="0.01" id="maxScore" placeholder="e.g. 20">
+        </div>
+
+        <p id="formTypeNote" style="display:none; font-size:0.85rem; color:var(--ink-soft); margin-top:10px;">
+          After creating this assignment, add its questions below in the "My Assignments" list — click "Manage Questions".
+        </p>
+
         <button class="primary" type="submit">Create assignment</button>
       </form>
 
       <h2 style="margin-top:28px;">My Assignments</h2>
       <table>
-        <thead><tr><th>Title</th><th>Course Unit</th><th>Due</th></tr></thead>
+        <thead><tr><th>Title</th><th>Course Unit</th><th>Type</th><th>Due</th><th>Actions</th></tr></thead>
         <tbody id="assignmentTable"></tbody>
       </table>
+
+      <!-- Question builder for the currently selected form-type assignment -->
+      <div id="questionBuilder" style="display:none; margin-top:24px; border-top: var(--border); padding-top:16px;">
+        <h2 id="questionBuilderTitle">Manage Questions</h2>
+
+        <form id="questionForm">
+          <label>Question type</label>
+          <select id="qType">
+            <option value="objective">Objective (multiple choice)</option>
+            <option value="theory">Theory (free text, graded by you)</option>
+          </select>
+
+          <label>Question text</label>
+          <textarea id="qText" required></textarea>
+
+          <div id="objectiveFields">
+            <div class="field-row">
+              <div><label>Option A</label><input type="text" id="optA"></div>
+              <div><label>Option B</label><input type="text" id="optB"></div>
+            </div>
+            <div class="field-row">
+              <div><label>Option C</label><input type="text" id="optC"></div>
+              <div><label>Option D</label><input type="text" id="optD"></div>
+            </div>
+            <label>Correct option</label>
+            <select id="correctOpt">
+              <option value="A">A</option><option value="B">B</option>
+              <option value="C">C</option><option value="D">D</option>
+            </select>
+          </div>
+
+          <label>Marks for this question</label>
+          <input type="number" step="0.01" id="qMarks" value="1" required>
+
+          <button class="primary" type="submit">Add question</button>
+        </form>
+
+        <table style="margin-top:16px;">
+          <thead><tr><th>#</th><th>Question</th><th>Type</th><th>Marks</th><th></th></tr></thead>
+          <tbody id="questionTable"></tbody>
+        </table>
+        <p id="totalMarksNote" style="font-size:0.85rem; color:var(--ink-soft);"></p>
+      </div>
     </div>
 
-    <!-- Submissions -->
+    <!-- File Submissions & Grading -->
     <div class="tab-panel panel" id="tab-submissions" style="display:none;">
-      <h2>View Submissions</h2>
+      <h2>View File/Text Submissions</h2>
       <label>Select assignment</label>
       <select id="submissionAssignmentSel"></select>
       <table>
@@ -59,9 +124,30 @@
       </table>
     </div>
 
+    <!-- Theory grading for form-type assignments -->
+    <div class="tab-panel panel" id="tab-theory" style="display:none;">
+      <h2>Grade Theory Answers</h2>
+      <label>Select assignment</label>
+      <select id="theoryAssignmentSel"></select>
+      <table>
+        <thead><tr><th>Student</th><th>Question</th><th>Answer</th><th>Max</th><th>Score</th><th></th></tr></thead>
+        <tbody id="theoryTable"></tbody>
+      </table>
+
+      <h2 style="margin-top:24px;">Compiled Scores</h2>
+      <table>
+        <thead><tr><th>Student</th><th>Total Score</th><th>Status</th></tr></thead>
+        <tbody id="formScoresTable"></tbody>
+      </table>
+    </div>
+
     <!-- Results -->
     <div class="tab-panel panel" id="tab-results" style="display:none;">
-      <h2>Enter Result</h2>
+      <h2>Enter Course Result</h2>
+      <p style="font-size:0.85rem; color:var(--ink-soft);">
+        This is for overall course results (coursework + exam), using the grade scale set by the admin.
+        It is separate from assignment marking above, which is entirely your own call.
+      </p>
       <form id="resultForm">
         <label>Course unit</label>
         <select id="resultUnitSel" required></select>

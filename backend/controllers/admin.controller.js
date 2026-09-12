@@ -11,6 +11,18 @@ async function getFaculties(req, res) {
   const result = await pool.query('SELECT * FROM faculties ORDER BY name');
   res.json(result.rows);
 }
+async function updateFaculty(req, res) {
+  const { id } = req.params;
+  const { name } = req.body;
+  const result = await pool.query('UPDATE faculties SET name = $1 WHERE id = $2 RETURNING *', [name, id]);
+  if (result.rows.length === 0) return res.status(404).json({ message: 'Faculty not found.' });
+  res.json(result.rows[0]);
+}
+async function deleteFaculty(req, res) {
+  const { id } = req.params;
+  await pool.query('DELETE FROM faculties WHERE id = $1', [id]);
+  res.json({ message: 'Faculty deleted.' });
+}
 
 // ---------- Departments ----------
 async function createDepartment(req, res) {
@@ -28,6 +40,21 @@ async function getDepartments(req, res) {
   );
   res.json(result.rows);
 }
+async function updateDepartment(req, res) {
+  const { id } = req.params;
+  const { faculty_id, name } = req.body;
+  const result = await pool.query(
+    'UPDATE departments SET faculty_id = $1, name = $2 WHERE id = $3 RETURNING *',
+    [faculty_id, name, id]
+  );
+  if (result.rows.length === 0) return res.status(404).json({ message: 'Department not found.' });
+  res.json(result.rows[0]);
+}
+async function deleteDepartment(req, res) {
+  const { id } = req.params;
+  await pool.query('DELETE FROM departments WHERE id = $1', [id]);
+  res.json({ message: 'Department deleted.' });
+}
 
 // ---------- Programs ----------
 async function createProgram(req, res) {
@@ -38,6 +65,18 @@ async function createProgram(req, res) {
 async function getPrograms(req, res) {
   const result = await pool.query('SELECT * FROM programs ORDER BY name');
   res.json(result.rows);
+}
+async function updateProgram(req, res) {
+  const { id } = req.params;
+  const { name } = req.body;
+  const result = await pool.query('UPDATE programs SET name = $1 WHERE id = $2 RETURNING *', [name, id]);
+  if (result.rows.length === 0) return res.status(404).json({ message: 'Program not found.' });
+  res.json(result.rows[0]);
+}
+async function deleteProgram(req, res) {
+  const { id } = req.params;
+  await pool.query('DELETE FROM programs WHERE id = $1', [id]);
+  res.json({ message: 'Program deleted.' });
 }
 
 // ---------- Academic Years & Semesters ----------
@@ -53,6 +92,22 @@ async function getAcademicYears(req, res) {
   const result = await pool.query('SELECT * FROM academic_years ORDER BY start_date DESC');
   res.json(result.rows);
 }
+async function updateAcademicYear(req, res) {
+  const { id } = req.params;
+  const { name, start_date, end_date } = req.body;
+  const result = await pool.query(
+    'UPDATE academic_years SET name = $1, start_date = $2, end_date = $3 WHERE id = $4 RETURNING *',
+    [name, start_date, end_date, id]
+  );
+  if (result.rows.length === 0) return res.status(404).json({ message: 'Academic year not found.' });
+  res.json(result.rows[0]);
+}
+async function deleteAcademicYear(req, res) {
+  const { id } = req.params;
+  await pool.query('DELETE FROM academic_years WHERE id = $1', [id]);
+  res.json({ message: 'Academic year deleted.' });
+}
+
 async function createSemester(req, res) {
   const { name } = req.body;
   const result = await pool.query('INSERT INTO semesters (name) VALUES ($1) RETURNING *', [name]);
@@ -61,6 +116,18 @@ async function createSemester(req, res) {
 async function getSemesters(req, res) {
   const result = await pool.query('SELECT * FROM semesters ORDER BY id');
   res.json(result.rows);
+}
+async function updateSemester(req, res) {
+  const { id } = req.params;
+  const { name } = req.body;
+  const result = await pool.query('UPDATE semesters SET name = $1 WHERE id = $2 RETURNING *', [name, id]);
+  if (result.rows.length === 0) return res.status(404).json({ message: 'Semester not found.' });
+  res.json(result.rows[0]);
+}
+async function deleteSemester(req, res) {
+  const { id } = req.params;
+  await pool.query('DELETE FROM semesters WHERE id = $1', [id]);
+  res.json({ message: 'Semester deleted.' });
 }
 
 // ---------- Courses & Course Units ----------
@@ -83,6 +150,23 @@ async function getCourses(req, res) {
   );
   res.json(result.rows);
 }
+async function updateCourse(req, res) {
+  const { id } = req.params;
+  const { faculty_id, department_id, code, name, duration, tuition } = req.body;
+  const result = await pool.query(
+    `UPDATE courses SET faculty_id = $1, department_id = $2, code = $3, name = $4, duration = $5, tuition = $6
+     WHERE id = $7 RETURNING *`,
+    [faculty_id, department_id, code, name, duration, tuition || 0, id]
+  );
+  if (result.rows.length === 0) return res.status(404).json({ message: 'Course not found.' });
+  res.json(result.rows[0]);
+}
+async function deleteCourse(req, res) {
+  const { id } = req.params;
+  await pool.query('DELETE FROM courses WHERE id = $1', [id]);
+  res.json({ message: 'Course deleted.' });
+}
+
 async function createCourseUnit(req, res) {
   const { course_id, semester_id, name } = req.body;
   const result = await pool.query(
@@ -100,6 +184,21 @@ async function getCourseUnits(req, res) {
      ORDER BY c.code`
   );
   res.json(result.rows);
+}
+async function updateCourseUnit(req, res) {
+  const { id } = req.params;
+  const { course_id, semester_id, name } = req.body;
+  const result = await pool.query(
+    'UPDATE course_units SET course_id = $1, semester_id = $2, name = $3 WHERE id = $4 RETURNING *',
+    [course_id, semester_id, name, id]
+  );
+  if (result.rows.length === 0) return res.status(404).json({ message: 'Course unit not found.' });
+  res.json(result.rows[0]);
+}
+async function deleteCourseUnit(req, res) {
+  const { id } = req.params;
+  await pool.query('DELETE FROM course_units WHERE id = $1', [id]);
+  res.json({ message: 'Course unit deleted.' });
 }
 
 // ---------- Lecturer registration (admin creates lecturer accounts) ----------
@@ -134,7 +233,7 @@ async function registerLecturer(req, res) {
     res.status(201).json(staffResult.rows[0]);
   } catch (err) {
     await client.query('ROLLBACK');
-    res.status(500).json({ message: 'Failed to register lecturer.', error: err.message });
+    throw err;
   } finally {
     client.release();
   }
@@ -146,6 +245,24 @@ async function getLecturers(req, res) {
   );
   res.json(result.rows);
 }
+async function updateLecturer(req, res) {
+  const { id } = req.params;
+  const { name, status } = req.body;
+  const result = await pool.query(
+    'UPDATE staff SET name = $1, status = $2 WHERE id = $3 RETURNING *',
+    [name, status || 'active', id]
+  );
+  if (result.rows.length === 0) return res.status(404).json({ message: 'Lecturer not found.' });
+  res.json(result.rows[0]);
+}
+async function deleteLecturer(req, res) {
+  const { id } = req.params;
+  // Deletes the staff row AND the underlying user account (cascades via user_id FK)
+  const staffRow = await pool.query('SELECT user_id FROM staff WHERE id = $1', [id]);
+  if (staffRow.rows.length === 0) return res.status(404).json({ message: 'Lecturer not found.' });
+  await pool.query('DELETE FROM users WHERE id = $1', [staffRow.rows[0].user_id]);
+  res.json({ message: 'Lecturer deleted.' });
+}
 
 // ---------- Assign lecturer to course unit ----------
 async function assignTeaches(req, res) {
@@ -155,6 +272,22 @@ async function assignTeaches(req, res) {
     [staff_id, course_unit_id]
   );
   res.status(201).json(result.rows[0]);
+}
+async function getTeaches(req, res) {
+  const result = await pool.query(
+    `SELECT t.*, s.name AS lecturer_name, cu.name AS unit_name, c.code AS course_code
+     FROM teaches t
+     JOIN staff s ON t.staff_id = s.id
+     JOIN course_units cu ON t.course_unit_id = cu.id
+     JOIN courses c ON cu.course_id = c.id
+     ORDER BY s.name`
+  );
+  res.json(result.rows);
+}
+async function deleteTeaches(req, res) {
+  const { id } = req.params;
+  await pool.query('DELETE FROM teaches WHERE id = $1', [id]);
+  res.json({ message: 'Assignment removed.' });
 }
 
 // ---------- Registration deadlines & pass marks ----------
@@ -188,17 +321,24 @@ async function getStudents(req, res) {
   );
   res.json(result.rows);
 }
+async function deleteStudent(req, res) {
+  const { id } = req.params;
+  const studentRow = await pool.query('SELECT user_id FROM students WHERE id = $1', [id]);
+  if (studentRow.rows.length === 0) return res.status(404).json({ message: 'Student not found.' });
+  await pool.query('DELETE FROM users WHERE id = $1', [studentRow.rows[0].user_id]);
+  res.json({ message: 'Student deleted.' });
+}
 
 module.exports = {
-  createFaculty, getFaculties,
-  createDepartment, getDepartments,
-  createProgram, getPrograms,
-  createAcademicYear, getAcademicYears,
-  createSemester, getSemesters,
-  createCourse, getCourses,
-  createCourseUnit, getCourseUnits,
-  registerLecturer, getLecturers,
-  assignTeaches,
+  createFaculty, getFaculties, updateFaculty, deleteFaculty,
+  createDepartment, getDepartments, updateDepartment, deleteDepartment,
+  createProgram, getPrograms, updateProgram, deleteProgram,
+  createAcademicYear, getAcademicYears, updateAcademicYear, deleteAcademicYear,
+  createSemester, getSemesters, updateSemester, deleteSemester,
+  createCourse, getCourses, updateCourse, deleteCourse,
+  createCourseUnit, getCourseUnits, updateCourseUnit, deleteCourseUnit,
+  registerLecturer, getLecturers, updateLecturer, deleteLecturer,
+  assignTeaches, getTeaches, deleteTeaches,
   setRegistrationDeadline, setPassMark,
-  getStudents
+  getStudents, deleteStudent
 };

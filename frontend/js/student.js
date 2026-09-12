@@ -1,6 +1,7 @@
 requireRole('student');
 const msg = document.getElementById('msg');
 let currentAssignmentId = null;
+let currentFormAssignmentId = null;
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -53,16 +54,25 @@ async function loadMyCourses() {
 // ---------- Assignments ----------
 async function loadAssignments() {
   const rows = await apiRequest('/student/assignments');
-  document.getElementById('assignmentTable').innerHTML = rows.map(a => `
-    <tr>
-      <td>${a.title}</td>
-      <td>${a.course_unit_name}</td>
-      <td>${new Date(a.due_date).toLocaleString()}</td>
-      <td><button class="primary" style="margin:0; padding:6px 10px;" onclick="openSubmit(${a.id}, '${a.title.replace(/'/g, "\\'")}')">Submit</button></td>
-    </tr>`).join('');
+  document.getElementById('assignmentTable').innerHTML = rows.map(a => {
+    let status = 'Not started';
+    let actionBtn = '';
+    if (a.assignment_type === 'file') {
+      status = a.submission_id ? (a.submission_grade != null ? `Graded: ${a.submission_grade}` : 'Submitted') : 'Not submitted';
+      actionBtn = `<button class="primary" style="margin:0; padding:6px 10px;" onclick="openSubmit(${a.id}, '${a.title.replace(/'/g, "\\'")}')">${a.submission_id ? 'Resubmit' : 'Submit'}</button>`;
+    } else {
+      status = a.has_answered ? 'Answered' : 'Not answered';
+      actionBtn = `<button class="primary" style="margin:0; padding:6px 10px;" onclick="openForm(${a.id}, '${a.title.replace(/'/g, "\\'")}')">${a.has_answered ? 'View / Retake' : 'Answer'}</button>`;
+    }
+    const brief = a.file_name ? ` <a href="/uploads/${a.file_path}" target="_blank">(brief: ${a.file_name})</a>` : '';
+    return row([a.title + brief, a.course_unit_name, new Date(a.due_date).toLocaleString(), status, actionBtn]);
+  }).join('');
 }
+
+// ---------- File/text submission ----------
 function openSubmit(id, title) {
   currentAssignmentId = id;
+  document.getElementById('formBox').style.display = 'none';
   document.getElementById('submitTitle').textContent = 'Submit: ' + title;
   document.getElementById('submitBox').style.display = 'block';
   document.getElementById('submitBox').scrollIntoView({ behavior: 'smooth' });
@@ -88,6 +98,75 @@ document.getElementById('submitForm').addEventListener('submit', async e => {
     showMsg(msg, 'Assignment submitted.');
     document.getElementById('submitForm').reset();
     document.getElementById('submitBox').style.display = 'none';
+    loadAssignments();
+  } catch (err) { showMsg(msg, err.message, true); }
+});
+
+// ---------- Interactive form answering ----------
+async function openForm(assignmentId, title) {
+  currentFormAssignmentId = assignmentId;
+  document.getElementById('submitBox').style.display = 'none';
+  document.getElementById('formBoxTitle').textContent = 'Answer: ' + title;
+  document.getElementById('formBox').style.display = 'block';
+  document.getElementById('formResultBox').style.display = 'none';
+  document.getElementById('formBox').scrollIntoView({ behavior: 'smooth' });
+
+  const questions = await apiRequest(`/student/assignments/${assignmentId}/questions`);
+  document.getElementById('questionsContainer').innerHTML = questions.map((q, i) => {
+    if (q.question_type === 'objective') {
+      return `
+        <div style="margin-bottom:16px;">
+          <label>${i + 1}. ${q.question_text} (${q.marks} mark${q.marks == 1 ? '' : 's'})</label>
+          ${['A', 'B', 'C', 'D'].map(letter => {
+            const optText = q['option_' + letter.toLowerCase()];
+            if (!optText) return '';
+            return `<div><label style="display:inline-flex; align-items:center; gap:6px; font-size:0.95rem; color:var(--ink);">
+                      <input type="radio" name="q-${q.id}" value="${letter}"> ${letter}. ${optText}
+                    </label></div>`;
+          }).join('')}
+        </div>`;
+    }
+    return `
+      <div style="margin-bottom:16px;">
+        <label>${i + 1}. ${q.question_text} (${q.marks} mark${q.marks == 1 ? '' : 's'})</label>
+        <textarea name="q-${q.id}" data-theory="1"></textarea>
+      </div>`;
+  }).join('');
+
+  // Show compiled score if already answered
+  try {
+    const scoreInfo = await apiRequest(`/student/assignments/${assignmentId}/my-score`);
+    if (scoreInfo.total_score !== null) {
+      const box = document.getElementById('formResultBox');
+      box.style.display = 'block';
+      box.className = 'msg ' + (scoreInfo.fully_graded ? 'ok' : '');
+      box.textContent = scoreInfo.fully_graded
+        ? `Final score: ${scoreInfo.total_score} / ${scoreInfo.max_score}`
+        : `Current score: ${scoreInfo.total_score} / ${scoreInfo.max_score} (theory answers still being graded)`;
+    }
+  } catch (err) { /* no score yet - fine */ }
+}
+document.getElementById('answerForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const inputs = document.getElementById('questionsContainer').querySelectorAll('[name^="q-"]');
+  const answers = {};
+  inputs.forEach(el => {
+    const qId = el.name.replace('q-', '');
+    if (el.type === 'radio') {
+      if (el.checked) answers[qId] = { question_id: Number(qId), selected_option: el.value };
+    } else {
+      answers[qId] = { question_id: Number(qId), answer_text: el.value };
+    }
+  });
+
+  try {
+    await apiRequest(`/student/assignments/${currentFormAssignmentId}/answers`, {
+      method: 'POST',
+      body: { answers: Object.values(answers) }
+    });
+    showMsg(msg, 'Answers submitted.');
+    loadAssignments();
+    openForm(currentFormAssignmentId, document.getElementById('formBoxTitle').textContent.replace('Answer: ', ''));
   } catch (err) { showMsg(msg, err.message, true); }
 });
 

@@ -22,6 +22,12 @@ app.use('/api/lecturer', lecturerRoutes);
 app.use('/api/student', studentRoutes);
 app.use('/api/public', publicRoutes);
 
+// Serve uploaded assignment/submission files
+// NOTE: this makes uploaded files reachable by anyone with the exact URL -
+// fine for a student project, but worth mentioning in your report as a
+// simplification (a production system would gate this behind auth).
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Serve the frontend (static files) so the whole app can be deployed as one Render service
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
@@ -29,10 +35,24 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'login.html'));
 });
 
-// Basic error handler (e.g. multer file-type errors)
+// Global error handler - catches errors passed via asyncHandler/next(err)
+// so failed requests return a proper JSON response instead of hanging
+// (which is what was causing 504 timeout pages).
 app.use((err, req, res, next) => {
   console.error(err);
-  res.status(400).json({ message: err.message || 'Something went wrong.' });
+
+  // Postgres unique constraint violation (e.g. assigning the same lecturer
+  // to the same course unit twice, or a duplicate course code)
+  if (err.code === '23505') {
+    return res.status(409).json({ message: 'That entry already exists - it looks like a duplicate.' });
+  }
+  // Postgres foreign key violation / invalid reference (e.g. an empty
+  // dropdown was submitted, so an invalid id was sent)
+  if (err.code === '23503' || err.code === '22P02') {
+    return res.status(400).json({ message: 'Please make sure every field/dropdown is filled in correctly.' });
+  }
+
+  res.status(err.status || 400).json({ message: err.message || 'Something went wrong.' });
 });
 
 const PORT = process.env.PORT || 5000;

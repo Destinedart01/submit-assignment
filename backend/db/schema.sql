@@ -126,7 +126,40 @@ CREATE TABLE assignments (
     title VARCHAR(200) NOT NULL,
     instructions TEXT,
     due_date TIMESTAMP,
+    assignment_type VARCHAR(10) NOT NULL DEFAULT 'file' CHECK (assignment_type IN ('file', 'form')),
+    max_score NUMERIC(6,2),          -- set by the lecturer; for 'form' type this is auto-filled from question marks
+    file_path VARCHAR(255),          -- optional brief/handout attached by the lecturer
+    file_name VARCHAR(150),
     created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Questions for an 'form' type assignment (objective = auto-graded, theory = graded by lecturer)
+CREATE TABLE assignment_questions (
+    id SERIAL PRIMARY KEY,
+    assignment_id INTEGER REFERENCES assignments(id) ON DELETE CASCADE,
+    question_text TEXT NOT NULL,
+    question_type VARCHAR(10) NOT NULL CHECK (question_type IN ('objective', 'theory')),
+    option_a VARCHAR(255),
+    option_b VARCHAR(255),
+    option_c VARCHAR(255),
+    option_d VARCHAR(255),
+    correct_option CHAR(1) CHECK (correct_option IN ('A','B','C','D')), -- only used for 'objective'
+    marks NUMERIC(6,2) NOT NULL DEFAULT 1,
+    position INTEGER DEFAULT 0
+);
+
+-- A student's answer to one question of a 'form' type assignment.
+-- Objective answers are auto-graded on submit; theory answers are graded later by the lecturer.
+CREATE TABLE student_answers (
+    id SERIAL PRIMARY KEY,
+    question_id INTEGER REFERENCES assignment_questions(id) ON DELETE CASCADE,
+    student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+    selected_option CHAR(1),
+    answer_text TEXT,
+    score_awarded NUMERIC(6,2),
+    graded BOOLEAN DEFAULT FALSE,
+    answered_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE (question_id, student_id)
 );
 
 CREATE TABLE submissions (

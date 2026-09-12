@@ -42,13 +42,21 @@ async function myCourses(req, res) {
 }
 
 // GET /api/student/assignments -> assignments for registered course units
+// Includes assignment_type/max_score so the frontend knows whether to show
+// the file/text submit box or the interactive question form, plus whether
+// this student has already submitted/answered it.
 async function myAssignments(req, res) {
   const studentId = await getStudentId(req.user.id);
   const result = await pool.query(
-    `SELECT a.*, cu.name AS course_unit_name
+    `SELECT a.*, cu.name AS course_unit_name,
+            sub.id AS submission_id, sub.grade AS submission_grade,
+            EXISTS(SELECT 1 FROM student_answers sa
+                   JOIN assignment_questions aq ON sa.question_id = aq.id
+                   WHERE aq.assignment_id = a.id AND sa.student_id = $1) AS has_answered
      FROM assignments a
      JOIN course_units cu ON a.course_unit_id = cu.id
      JOIN registrations r ON r.course_unit_id = cu.id
+     LEFT JOIN submissions sub ON sub.assignment_id = a.id AND sub.student_id = $1
      WHERE r.student_id = $1
      ORDER BY a.due_date`,
     [studentId]
@@ -57,6 +65,7 @@ async function myAssignments(req, res) {
 }
 
 // POST /api/student/assignments/:id/submit  (multipart/form-data: text_content + optional file)
+// Only used for 'file' type assignments.
 async function submitAssignment(req, res) {
   const studentId = await getStudentId(req.user.id);
   const { id } = req.params;
@@ -69,9 +78,87 @@ async function submitAssignment(req, res) {
      ON CONFLICT (assignment_id, student_id)
      DO UPDATE SET text_content = $3, file_path = $4, file_name = $5, submitted_at = NOW()
      RETURNING *`,
-    [id, studentId, text_content || null, file ? file.path : null, file ? file.originalname : null]
+    [id, studentId, text_content || null, file ? file.filename : null, file ? file.originalname : null]
   );
   res.status(201).json(result.rows[0]);
+}
+
+// ---------- Interactive form-based assignments ----------
+
+// GET /api/student/assignments/:id/questions -> questions WITHOUT the correct answer exposed
+async function getAssignmentQuestions(req, res) {
+  const { id } = req.params;
+  const result = await pool.query(
+    `SELECT id, question_text, question_type, option_a, option_b, option_c, option_d, marks
+     FROM assignment_questions WHERE assignment_id = $1 ORDER BY id`,
+    [id]
+  );
+  res.json(result.rows);
+}
+
+// POST /api/student/assignments/:id/answers
+// body: { answers: [ { question_id, selected_option? , answer_text? } ] }
+// Objective answers are auto-graded here; theory answers are left ungraded
+// for the lecturer to score later.
+async function submitAnswers(req, res) {
+  const studentId = await getStudentId(req.user.id);
+  const { answers } = req.body;
+
+  if (!Array.isArray(answers) || answers.length === 0) {
+    return res.status(400).json({ message: 'No answers were provided.' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    for (const ans of answers) {
+      const qResult = await client.query(
+        'SELECT question_type, correct_option, marks FROM assignment_questions WHERE id = $1',
+        [ans.question_id]
+      );
+      if (qResult.rows.length === 0) continue;
+      const q = qResult.rows[0];
+
+      let scoreAwarded = null;
+      let graded = false;
+      if (q.question_type === 'objective') {
+        scoreAwarded = (ans.selected_option && ans.selected_option === q.correct_option) ? q.marks : 0;
+        graded = true;
+      }
+
+      await client.query(
+        `INSERT INTO student_answers (question_id, student_id, selected_option, answer_text, score_awarded, graded)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (question_id, student_id)
+         DO UPDATE SET selected_option = $3, answer_text = $4, score_awarded = $5, graded = $6, answered_at = NOW()`,
+        [ans.question_id, studentId, ans.selected_option || null, ans.answer_text || null, scoreAwarded, graded]
+      );
+    }
+
+    await client.query('COMMIT');
+    res.status(201).json({ message: 'Answers submitted.' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+// GET /api/student/assignments/:id/my-score -> compiled score for a form assignment
+async function myFormScore(req, res) {
+  const studentId = await getStudentId(req.user.id);
+  const { id } = req.params;
+  const result = await pool.query(
+    `SELECT SUM(COALESCE(sa.score_awarded, 0)) AS total_score, BOOL_AND(sa.graded) AS fully_graded,
+            (SELECT max_score FROM assignments WHERE id = $1) AS max_score
+     FROM student_answers sa
+     JOIN assignment_questions aq ON sa.question_id = aq.id
+     WHERE aq.assignment_id = $1 AND sa.student_id = $2`,
+    [id, studentId]
+  );
+  res.json(result.rows[0] || { total_score: 0, fully_graded: false, max_score: null });
 }
 
 // GET /api/student/results
@@ -88,4 +175,8 @@ async function myResults(req, res) {
   res.json(result.rows);
 }
 
-module.exports = { availableCourseUnits, registerCourse, myCourses, myAssignments, submitAssignment, myResults };
+module.exports = {
+  availableCourseUnits, registerCourse, myCourses, myAssignments, submitAssignment,
+  getAssignmentQuestions, submitAnswers, myFormScore,
+  myResults
+};

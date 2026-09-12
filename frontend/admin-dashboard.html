@@ -38,9 +38,9 @@
       <form id="facultyForm">
         <label>Faculty name</label>
         <input type="text" id="facultyName" required>
-        <button class="primary" type="submit">Add faculty</button>
+        <button class="primary" type="submit" id="facultySubmitBtn">Add faculty</button> <button type="button" id="facultyCancelBtn" style="display:none;" onclick="cancelEdit('faculty')">Cancel</button>
       </form>
-      <table><thead><tr><th>ID</th><th>Name</th></tr></thead><tbody id="facultyTable"></tbody></table>
+      <table><thead><tr><th>ID</th><th>Name</th><th>Actions</th></tr></thead><tbody id="facultyTable"></tbody></table>
     </div>
 
     <!-- Departments -->
@@ -51,9 +51,9 @@
         <select id="deptFacultySel" required></select>
         <label>Department name</label>
         <input type="text" id="deptName" required>
-        <button class="primary" type="submit">Add department</button>
+        <button class="primary" type="submit" id="departmentSubmitBtn">Add department</button> <button type="button" id="departmentCancelBtn" style="display:none;" onclick="cancelEdit('department')">Cancel</button>
       </form>
-      <table><thead><tr><th>ID</th><th>Name</th><th>Faculty</th></tr></thead><tbody id="departmentTable"></tbody></table>
+      <table><thead><tr><th>ID</th><th>Name</th><th>Faculty</th><th>Actions</th></tr></thead><tbody id="departmentTable"></tbody></table>
     </div>
 
     <!-- Programs -->
@@ -62,9 +62,9 @@
       <form id="programForm">
         <label>Program name (e.g. ND, HND, BSc)</label>
         <input type="text" id="programName" required>
-        <button class="primary" type="submit">Add program</button>
+        <button class="primary" type="submit" id="programSubmitBtn">Add program</button> <button type="button" id="programCancelBtn" style="display:none;" onclick="cancelEdit('program')">Cancel</button>
       </form>
-      <table><thead><tr><th>ID</th><th>Name</th></tr></thead><tbody id="programTable"></tbody></table>
+      <table><thead><tr><th>ID</th><th>Name</th><th>Actions</th></tr></thead><tbody id="programTable"></tbody></table>
     </div>
 
     <!-- Academic Calendar -->
@@ -76,17 +76,17 @@
           <div><label>Start date</label><input type="date" id="yearStart"></div>
           <div><label>End date</label><input type="date" id="yearEnd"></div>
         </div>
-        <button class="primary" type="submit">Add academic year</button>
+        <button class="primary" type="submit" id="yearSubmitBtn">Add academic year</button> <button type="button" id="yearCancelBtn" style="display:none;" onclick="cancelEdit('year')">Cancel</button>
       </form>
-      <table><thead><tr><th>ID</th><th>Name</th><th>Start</th><th>End</th></tr></thead><tbody id="yearTable"></tbody></table>
+      <table><thead><tr><th>ID</th><th>Name</th><th>Start</th><th>End</th><th>Actions</th></tr></thead><tbody id="yearTable"></tbody></table>
 
       <h2 style="margin-top:28px;">Semesters</h2>
       <form id="semesterForm">
         <label>Name (e.g. First, Second)</label>
         <input type="text" id="semesterName" required>
-        <button class="primary" type="submit">Add semester</button>
+        <button class="primary" type="submit" id="semesterSubmitBtn">Add semester</button> <button type="button" id="semesterCancelBtn" style="display:none;" onclick="cancelEdit('semester')">Cancel</button>
       </form>
-      <table><thead><tr><th>ID</th><th>Name</th></tr></thead><tbody id="semesterTable"></tbody></table>
+      <table><thead><tr><th>ID</th><th>Name</th><th>Actions</th></tr></thead><tbody id="semesterTable"></tbody></table>
     </div>
 
     <!-- Courses & Units -->
@@ -105,21 +105,21 @@
           <div><label>Duration (e.g. 2 years)</label><input type="text" id="courseDuration"></div>
           <div><label>Tuition</label><input type="number" step="0.01" id="courseTuition"></div>
         </div>
-        <button class="primary" type="submit">Add course</button>
+        <button class="primary" type="submit" id="courseSubmitBtn">Add course</button> <button type="button" id="courseCancelBtn" style="display:none;" onclick="cancelEdit('course')">Cancel</button>
       </form>
-      <table><thead><tr><th>Code</th><th>Name</th><th>Faculty</th><th>Dept</th></tr></thead><tbody id="courseTable"></tbody></table>
+      <table><thead><tr><th>Code</th><th>Name</th><th>Faculty</th><th>Dept</th><th>Actions</th></tr></thead><tbody id="courseTable"></tbody></table>
 
       <h2 style="margin-top:28px;">Course Units</h2>
       <form id="unitForm">
         <div class="field-row">
-          <div><label>Course</label><select id="unitCourseSel"></select></div>
-          <div><label>Semester</label><select id="unitSemesterSel"></select></div>
+          <div><label>Course</label><select id="unitCourseSel" required></select></div>
+          <div><label>Semester</label><select id="unitSemesterSel" required></select></div>
         </div>
         <label>Unit name</label>
         <input type="text" id="unitName" required>
-        <button class="primary" type="submit">Add course unit</button>
+        <button class="primary" type="submit" id="unitSubmitBtn">Add course unit</button> <button type="button" id="unitCancelBtn" style="display:none;" onclick="cancelEdit('unit')">Cancel</button>
       </form>
-      <table><thead><tr><th>ID</th><th>Unit</th><th>Course</th><th>Semester</th></tr></thead><tbody id="unitTable"></tbody></table>
+      <table><thead><tr><th>ID</th><th>Unit</th><th>Course</th><th>Semester</th><th>Actions</th></tr></thead><tbody id="unitTable"></tbody></table>
     </div>
 
     <!-- Lecturers -->
@@ -131,10 +131,16 @@
         <label>Username</label>
         <input type="text" id="lecUsername" required>
         <label>Password</label>
-        <input type="password" id="lecPassword" required>
-        <button class="primary" type="submit">Register lecturer</button>
+        <input type="password" id="lecPassword">
+        <p style="font-size:0.8rem; color:var(--ink-soft); margin:2px 0 0;">Password is required when registering a new lecturer; leave blank when editing an existing one.</p>
+        <label>Status</label>
+        <select id="lecStatus">
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+        <button class="primary" type="submit" id="lecturerSubmitBtn">Register lecturer</button> <button type="button" id="lecturerCancelBtn" style="display:none;" onclick="cancelEdit('lecturer')">Cancel</button>
       </form>
-      <table><thead><tr><th>ID</th><th>Name</th><th>Username</th></tr></thead><tbody id="lecturerTable"></tbody></table>
+      <table><thead><tr><th>ID</th><th>Name</th><th>Username</th><th>Actions</th></tr></thead><tbody id="lecturerTable"></tbody></table>
     </div>
 
     <!-- Assign lecturer to course unit -->
@@ -142,18 +148,21 @@
       <h2>Assign Lecturer to Course Unit</h2>
       <form id="teachesForm">
         <label>Lecturer</label>
-        <select id="teachesLecturerSel"></select>
+        <select id="teachesLecturerSel" required></select>
         <label>Course unit</label>
-        <select id="teachesUnitSel"></select>
+        <select id="teachesUnitSel" required></select>
         <button class="primary" type="submit">Assign</button>
       </form>
+
+      <h2 style="margin-top:28px;">Current Assignments</h2>
+      <table><thead><tr><th>Lecturer</th><th>Course</th><th>Unit</th><th>Actions</th></tr></thead><tbody id="teachesTable"></tbody></table>
     </div>
 
     <!-- Students -->
     <div class="tab-panel panel" id="tab-students" style="display:none;">
       <h2>Registered Students</h2>
       <table>
-        <thead><tr><th>Student No</th><th>Name</th><th>Faculty</th><th>Department</th></tr></thead>
+        <thead><tr><th>Student No</th><th>Name</th><th>Faculty</th><th>Department</th><th>Actions</th></tr></thead>
         <tbody id="studentTable"></tbody>
       </table>
     </div>
@@ -163,8 +172,8 @@
       <h2>Registration Deadline</h2>
       <form id="deadlineForm">
         <div class="field-row">
-          <div><label>Academic year</label><select id="deadlineYearSel"></select></div>
-          <div><label>Semester</label><select id="deadlineSemesterSel"></select></div>
+          <div><label>Academic year</label><select id="deadlineYearSel" required></select></div>
+          <div><label>Semester</label><select id="deadlineSemesterSel" required></select></div>
           <div><label>Deadline date</label><input type="date" id="deadlineDate" required></div>
         </div>
         <button class="primary" type="submit">Set deadline</button>
