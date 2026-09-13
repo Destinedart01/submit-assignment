@@ -1,22 +1,22 @@
 /* ============================================================
    Design tokens
-   Palette: deep ledger-navy + warm parchment + brass accent
+   Palette: tea green + white
    Type: Fraunces (display/serif) for headings, Inter for body
    ============================================================ */
 :root {
-  --navy-950: #12182b;
-  --navy-800: #1e2a4a;
-  --navy-600: #33456f;
-  --parchment: #f5f1e8;
-  --parchment-dim: #ece5d4;
-  --brass: #b0862c;
-  --brass-dim: #8f6f24;
+  --navy-950: #1f3d24;   /* deep tea green - topbar / dark surfaces */
+  --navy-800: #2f6b3a;   /* primary buttons */
+  --navy-600: #3c8a49;   /* hover state */
+  --parchment: #ffffff;  /* page background */
+  --parchment-dim: #eaf5ea; /* subtle tea-tinted surfaces */
+  --brass: #7cb87f;      /* accent border / links */
+  --brass-dim: #5b9b60;
   --ink: #23262f;
   --ink-soft: #5a5f6d;
   --danger: #a3382f;
-  --ok: #33693f;
+  --ok: #2f6b3a;
   --radius: 3px;
-  --border: 1px solid #d8d0bb;
+  --border: 1px solid #cfe8cf;
 }
 
 * { box-sizing: border-box; }
@@ -71,7 +71,7 @@ h1, h2, h3, .brand {
 }
 
 .panel {
-  background: #fffdf7;
+  background: #ffffff;
   border: var(--border);
   border-radius: var(--radius);
   padding: 22px 24px;
@@ -101,7 +101,7 @@ h1, h2, h3, .brand {
   color: var(--ink-soft);
 }
 .tabs button.active {
-  background: #fffdf7;
+  background: #ffffff;
   color: var(--ink);
   font-weight: 600;
   border-top: 2px solid var(--brass);
@@ -142,14 +142,14 @@ button.primary:hover { background: var(--navy-600); }
 
 /* ---------- Tables ---------- */
 table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.92rem; }
-th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e4ddc9; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #d9ecd9; }
 th { color: var(--ink-soft); font-weight: 600; font-size: 0.8rem; text-transform: none; }
-tr:hover td { background: #faf6ea; }
+tr:hover td { background: #f1f9f1; }
 
 /* ---------- Messages ---------- */
 .msg { padding: 10px 14px; border-radius: var(--radius); margin: 14px 0; font-size: 0.9rem; }
-.msg.ok { background: #e7f0e8; color: var(--ok); border: 1px solid #bcd9c0; }
-.msg.err { background: #f5e5e3; color: var(--danger); border: 1px solid #e0bcb6; }
+.msg.ok { background: #e5f5e6; color: var(--ok); border: 1px solid #b7ddb9; }
+.msg.err { background: #fbeceb; color: var(--danger); border: 1px solid #eec4bf; }
 
 /* ---------- Auth pages ---------- */
 .auth-page {
@@ -180,5 +180,5 @@ tr:hover td { background: #faf6ea; }
   background: var(--parchment-dim);
   color: var(--ink-soft);
 }
-.badge.pass { background: #e7f0e8; color: var(--ok); }
-.badge.fail { background: #f5e5e3; color: var(--danger); }
+.badge.pass { background: #e5f5e6; color: var(--ok); }
+.badge.fail { background: #fbeceb; color: var(--danger); }

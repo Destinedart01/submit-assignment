@@ -130,33 +130,36 @@ async function deleteSemester(req, res) {
   res.json({ message: 'Semester deleted.' });
 }
 
-// ---------- Courses & Course Units ----------
+// ---------- Courses ----------
+// A course = faculty + department + code + title + semester (no separate
+// "course unit" - each course row IS the teachable unit).
 async function createCourse(req, res) {
-  const { faculty_id, department_id, code, name, duration, tuition } = req.body;
+  const { faculty_id, department_id, code, title, semester_id } = req.body;
   const result = await pool.query(
-    `INSERT INTO courses (faculty_id, department_id, code, name, duration, tuition)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [faculty_id, department_id, code, name, duration, tuition || 0]
+    `INSERT INTO courses (faculty_id, department_id, code, title, semester_id)
+     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [faculty_id, department_id, code, title, semester_id]
   );
   res.status(201).json(result.rows[0]);
 }
 async function getCourses(req, res) {
   const result = await pool.query(
-    `SELECT c.*, f.name AS faculty_name, d.name AS department_name
+    `SELECT c.*, f.name AS faculty_name, d.name AS department_name, s.name AS semester_name
      FROM courses c
      LEFT JOIN faculties f ON c.faculty_id = f.id
      LEFT JOIN departments d ON c.department_id = d.id
+     LEFT JOIN semesters s ON c.semester_id = s.id
      ORDER BY c.code`
   );
   res.json(result.rows);
 }
 async function updateCourse(req, res) {
   const { id } = req.params;
-  const { faculty_id, department_id, code, name, duration, tuition } = req.body;
+  const { faculty_id, department_id, code, title, semester_id } = req.body;
   const result = await pool.query(
-    `UPDATE courses SET faculty_id = $1, department_id = $2, code = $3, name = $4, duration = $5, tuition = $6
-     WHERE id = $7 RETURNING *`,
-    [faculty_id, department_id, code, name, duration, tuition || 0, id]
+    `UPDATE courses SET faculty_id = $1, department_id = $2, code = $3, title = $4, semester_id = $5
+     WHERE id = $6 RETURNING *`,
+    [faculty_id, department_id, code, title, semester_id, id]
   );
   if (result.rows.length === 0) return res.status(404).json({ message: 'Course not found.' });
   res.json(result.rows[0]);
@@ -165,40 +168,6 @@ async function deleteCourse(req, res) {
   const { id } = req.params;
   await pool.query('DELETE FROM courses WHERE id = $1', [id]);
   res.json({ message: 'Course deleted.' });
-}
-
-async function createCourseUnit(req, res) {
-  const { course_id, semester_id, name } = req.body;
-  const result = await pool.query(
-    'INSERT INTO course_units (course_id, semester_id, name) VALUES ($1, $2, $3) RETURNING *',
-    [course_id, semester_id, name]
-  );
-  res.status(201).json(result.rows[0]);
-}
-async function getCourseUnits(req, res) {
-  const result = await pool.query(
-    `SELECT cu.*, c.code AS course_code, s.name AS semester_name
-     FROM course_units cu
-     JOIN courses c ON cu.course_id = c.id
-     JOIN semesters s ON cu.semester_id = s.id
-     ORDER BY c.code`
-  );
-  res.json(result.rows);
-}
-async function updateCourseUnit(req, res) {
-  const { id } = req.params;
-  const { course_id, semester_id, name } = req.body;
-  const result = await pool.query(
-    'UPDATE course_units SET course_id = $1, semester_id = $2, name = $3 WHERE id = $4 RETURNING *',
-    [course_id, semester_id, name, id]
-  );
-  if (result.rows.length === 0) return res.status(404).json({ message: 'Course unit not found.' });
-  res.json(result.rows[0]);
-}
-async function deleteCourseUnit(req, res) {
-  const { id } = req.params;
-  await pool.query('DELETE FROM course_units WHERE id = $1', [id]);
-  res.json({ message: 'Course unit deleted.' });
 }
 
 // ---------- Lecturer registration (admin creates lecturer accounts) ----------
@@ -257,29 +226,27 @@ async function updateLecturer(req, res) {
 }
 async function deleteLecturer(req, res) {
   const { id } = req.params;
-  // Deletes the staff row AND the underlying user account (cascades via user_id FK)
   const staffRow = await pool.query('SELECT user_id FROM staff WHERE id = $1', [id]);
   if (staffRow.rows.length === 0) return res.status(404).json({ message: 'Lecturer not found.' });
   await pool.query('DELETE FROM users WHERE id = $1', [staffRow.rows[0].user_id]);
   res.json({ message: 'Lecturer deleted.' });
 }
 
-// ---------- Assign lecturer to course unit ----------
+// ---------- Assign lecturer to course ----------
 async function assignTeaches(req, res) {
-  const { staff_id, course_unit_id } = req.body;
+  const { staff_id, course_id } = req.body;
   const result = await pool.query(
-    'INSERT INTO teaches (staff_id, course_unit_id) VALUES ($1, $2) RETURNING *',
-    [staff_id, course_unit_id]
+    'INSERT INTO teaches (staff_id, course_id) VALUES ($1, $2) RETURNING *',
+    [staff_id, course_id]
   );
   res.status(201).json(result.rows[0]);
 }
 async function getTeaches(req, res) {
   const result = await pool.query(
-    `SELECT t.*, s.name AS lecturer_name, cu.name AS unit_name, c.code AS course_code
+    `SELECT t.*, s.name AS lecturer_name, c.code AS course_code, c.title AS course_title
      FROM teaches t
      JOIN staff s ON t.staff_id = s.id
-     JOIN course_units cu ON t.course_unit_id = cu.id
-     JOIN courses c ON cu.course_id = c.id
+     JOIN courses c ON t.course_id = c.id
      ORDER BY s.name`
   );
   res.json(result.rows);
@@ -288,25 +255,6 @@ async function deleteTeaches(req, res) {
   const { id } = req.params;
   await pool.query('DELETE FROM teaches WHERE id = $1', [id]);
   res.json({ message: 'Assignment removed.' });
-}
-
-// ---------- Registration deadlines & pass marks ----------
-async function setRegistrationDeadline(req, res) {
-  const { academic_year_id, semester_id, deadline_date } = req.body;
-  const result = await pool.query(
-    `INSERT INTO registration_deadlines (academic_year_id, semester_id, deadline_date)
-     VALUES ($1, $2, $3) RETURNING *`,
-    [academic_year_id, semester_id, deadline_date]
-  );
-  res.status(201).json(result.rows[0]);
-}
-async function setPassMark(req, res) {
-  const { pass_mark } = req.body;
-  const result = await pool.query(
-    'INSERT INTO pass_marks (pass_mark) VALUES ($1) RETURNING *',
-    [pass_mark]
-  );
-  res.status(201).json(result.rows[0]);
 }
 
 // ---------- Students overview ----------
@@ -336,9 +284,7 @@ module.exports = {
   createAcademicYear, getAcademicYears, updateAcademicYear, deleteAcademicYear,
   createSemester, getSemesters, updateSemester, deleteSemester,
   createCourse, getCourses, updateCourse, deleteCourse,
-  createCourseUnit, getCourseUnits, updateCourseUnit, deleteCourseUnit,
   registerLecturer, getLecturers, updateLecturer, deleteLecturer,
   assignTeaches, getTeaches, deleteTeaches,
-  setRegistrationDeadline, setPassMark,
   getStudents, deleteStudent
 };

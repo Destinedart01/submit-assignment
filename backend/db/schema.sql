@@ -75,37 +75,24 @@ CREATE TABLE students (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- A course = faculty + department + code + title + semester (no separate
+-- "course unit" concept - each course IS the teachable unit).
 CREATE TABLE courses (
     id SERIAL PRIMARY KEY,
     faculty_id INTEGER REFERENCES faculties(id),
     department_id INTEGER REFERENCES departments(id),
     code VARCHAR(20) NOT NULL,
-    name VARCHAR(200) NOT NULL,
-    duration VARCHAR(20),
-    tuition NUMERIC(10,2) DEFAULT 0,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE TABLE course_units (
-    id SERIAL PRIMARY KEY,
-    course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
+    title VARCHAR(200) NOT NULL,
     semester_id INTEGER REFERENCES semesters(id),
-    name VARCHAR(200) NOT NULL
+    created_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE teaches (
     id SERIAL PRIMARY KEY,
     staff_id INTEGER REFERENCES staff(id) ON DELETE CASCADE,
-    course_unit_id INTEGER REFERENCES course_units(id) ON DELETE CASCADE,
+    course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
     assigned_date DATE DEFAULT CURRENT_DATE,
-    UNIQUE (staff_id, course_unit_id)
-);
-
-CREATE TABLE registration_deadlines (
-    id SERIAL PRIMARY KEY,
-    academic_year_id INTEGER REFERENCES academic_years(id),
-    semester_id INTEGER REFERENCES semesters(id),
-    deadline_date DATE NOT NULL
+    UNIQUE (staff_id, course_id)
 );
 
 CREATE TABLE registrations (
@@ -113,27 +100,27 @@ CREATE TABLE registrations (
     student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
     academic_year_id INTEGER REFERENCES academic_years(id),
     semester_id INTEGER REFERENCES semesters(id),
-    course_unit_id INTEGER REFERENCES course_units(id),
+    course_id INTEGER REFERENCES courses(id),
     status VARCHAR(15) DEFAULT 'registered',
     registered_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE (student_id, course_unit_id, academic_year_id, semester_id)
+    UNIQUE (student_id, course_id, academic_year_id, semester_id)
 );
 
 CREATE TABLE assignments (
     id SERIAL PRIMARY KEY,
-    course_unit_id INTEGER REFERENCES course_units(id) ON DELETE CASCADE,
+    course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
     lecturer_id INTEGER REFERENCES staff(id),
     title VARCHAR(200) NOT NULL,
     instructions TEXT,
-    due_date TIMESTAMP,
+    due_date TIMESTAMP,                -- set by the lecturer
     assignment_type VARCHAR(10) NOT NULL DEFAULT 'file' CHECK (assignment_type IN ('file', 'form')),
-    max_score NUMERIC(6,2),          -- set by the lecturer; for 'form' type this is auto-filled from question marks
-    file_path VARCHAR(255),          -- optional brief/handout attached by the lecturer
+    max_score NUMERIC(6,2),            -- set by the lecturer; for 'form' type this is auto-filled from question marks
+    file_path VARCHAR(255),            -- optional brief/handout attached by the lecturer
     file_name VARCHAR(150),
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Questions for an 'form' type assignment (objective = auto-graded, theory = graded by lecturer)
+-- Questions for a 'form' type assignment (objective = auto-graded, theory = graded by lecturer)
 CREATE TABLE assignment_questions (
     id SERIAL PRIMARY KEY,
     assignment_id INTEGER REFERENCES assignments(id) ON DELETE CASCADE,
@@ -182,22 +169,19 @@ CREATE TABLE grade_scale (
     grade_point NUMERIC(5,3) NOT NULL
 );
 
-CREATE TABLE pass_marks (
-    id SERIAL PRIMARY KEY,
-    pass_mark NUMERIC(5,2) NOT NULL DEFAULT 40
-);
-
+-- Course results (overall coursework score -> grade, via grade_scale above).
+-- This is separate from assignment marking, which is entirely the lecturer's call.
 CREATE TABLE results (
     id SERIAL PRIMARY KEY,
     student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
-    course_unit_id INTEGER REFERENCES course_units(id) ON DELETE CASCADE,
+    course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
     staff_id INTEGER REFERENCES staff(id),
     coursework_score NUMERIC(5,2) DEFAULT 0,
-    exam_score NUMERIC(5,2) DEFAULT 0,
+    exam_score NUMERIC(5,2) DEFAULT 0,   -- kept for potential future use; the UI no longer asks for it
     total_score NUMERIC(5,2) DEFAULT 0,
     grade VARCHAR(5),
     result_date TIMESTAMP DEFAULT NOW(),
-    UNIQUE (student_id, course_unit_id)
+    UNIQUE (student_id, course_id)
 );
 
 CREATE TABLE articles (
@@ -219,5 +203,3 @@ INSERT INTO grade_scale (lower_bound, upper_bound, grade, grade_point) VALUES
 (45, 49.99, 'D', 2.0),
 (40, 44.99, 'E', 1.0),
 (0, 39.99, 'F', 0.0);
-
-INSERT INTO pass_marks (pass_mark) VALUES (40);

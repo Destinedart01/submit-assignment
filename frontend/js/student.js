@@ -23,11 +23,11 @@ async function loadRegLookups() {
   const [years, semesters, units] = await Promise.all([
     apiRequest('/public/academic-years'),
     apiRequest('/public/semesters'),
-    apiRequest('/student/course-units')
+    apiRequest('/student/courses')
   ]);
   fill(document.getElementById('regYearSel'), years, r => r.name, 'Select year');
   fill(document.getElementById('regSemesterSel'), semesters, r => r.name, 'Select semester');
-  fill(document.getElementById('regUnitSel'), units, r => `${r.course_code} - ${r.name}`, 'Select course unit');
+  fill(document.getElementById('regUnitSel'), units, r => `${r.code} - ${r.title}`, 'Select course');
 }
 document.getElementById('registerCourseForm').addEventListener('submit', async e => {
   e.preventDefault();
@@ -37,7 +37,7 @@ document.getElementById('registerCourseForm').addEventListener('submit', async e
       body: {
         academic_year_id: document.getElementById('regYearSel').value,
         semester_id: document.getElementById('regSemesterSel').value,
-        course_unit_id: document.getElementById('regUnitSel').value
+        course_id: document.getElementById('regUnitSel').value
       }
     });
     showMsg(msg, 'Registered successfully.');
@@ -48,7 +48,7 @@ document.getElementById('registerCourseForm').addEventListener('submit', async e
 async function loadMyCourses() {
   const rows = await apiRequest('/student/my-courses');
   document.getElementById('myCoursesTable').innerHTML =
-    rows.map(r => row([r.course_code, r.course_unit_name, r.status])).join('');
+    rows.map(r => row([r.course_code, r.course_title, r.status])).join('');
 }
 
 // ---------- Assignments ----------
@@ -65,7 +65,7 @@ async function loadAssignments() {
       actionBtn = `<button class="primary" style="margin:0; padding:6px 10px;" onclick="openForm(${a.id}, '${a.title.replace(/'/g, "\\'")}')">${a.has_answered ? 'View / Retake' : 'Answer'}</button>`;
     }
     const brief = a.file_name ? ` <a href="/uploads/${a.file_path}" target="_blank">(brief: ${a.file_name})</a>` : '';
-    return row([a.title + brief, a.course_unit_name, new Date(a.due_date).toLocaleString(), status, actionBtn]);
+    return row([a.title + brief, `${a.course_code} - ${a.course_title}`, new Date(a.due_date).toLocaleString(), status, actionBtn]);
   }).join('');
 }
 
@@ -174,7 +174,7 @@ document.getElementById('answerForm').addEventListener('submit', async e => {
 async function loadResults() {
   const rows = await apiRequest('/student/results');
   document.getElementById('resultTable').innerHTML =
-    rows.map(r => row([r.course_unit_name, r.coursework_score, r.exam_score, r.total_score, r.grade])).join('');
+    rows.map(r => row([`${r.course_code} - ${r.course_title}`, r.total_score, r.grade])).join('');
 }
 
 (async function init() {

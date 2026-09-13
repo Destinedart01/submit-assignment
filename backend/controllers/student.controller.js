@@ -5,11 +5,11 @@ async function getStudentId(userId) {
   return result.rows[0] ? result.rows[0].id : null;
 }
 
-// GET /api/student/course-units -> units available to register for
-async function availableCourseUnits(req, res) {
+// GET /api/student/courses -> courses available to register for
+async function availableCourses(req, res) {
   const result = await pool.query(
-    `SELECT cu.*, c.code AS course_code, c.name AS course_name
-     FROM course_units cu JOIN courses c ON cu.course_id = c.id
+    `SELECT c.*, s.name AS semester_name
+     FROM courses c LEFT JOIN semesters s ON c.semester_id = s.id
      ORDER BY c.code`
   );
   res.json(result.rows);
@@ -18,44 +18,43 @@ async function availableCourseUnits(req, res) {
 // POST /api/student/register-course
 async function registerCourse(req, res) {
   const studentId = await getStudentId(req.user.id);
-  const { academic_year_id, semester_id, course_unit_id } = req.body;
+  const { academic_year_id, semester_id, course_id } = req.body;
   const result = await pool.query(
-    `INSERT INTO registrations (student_id, academic_year_id, semester_id, course_unit_id)
+    `INSERT INTO registrations (student_id, academic_year_id, semester_id, course_id)
      VALUES ($1, $2, $3, $4) RETURNING *`,
-    [studentId, academic_year_id, semester_id, course_unit_id]
+    [studentId, academic_year_id, semester_id, course_id]
   );
   res.status(201).json(result.rows[0]);
 }
 
-// GET /api/student/my-courses -> registered course units
+// GET /api/student/my-courses -> registered courses
 async function myCourses(req, res) {
   const studentId = await getStudentId(req.user.id);
   const result = await pool.query(
-    `SELECT r.*, cu.name AS course_unit_name, c.code AS course_code
+    `SELECT r.*, c.title AS course_title, c.code AS course_code
      FROM registrations r
-     JOIN course_units cu ON r.course_unit_id = cu.id
-     JOIN courses c ON cu.course_id = c.id
+     JOIN courses c ON r.course_id = c.id
      WHERE r.student_id = $1`,
     [studentId]
   );
   res.json(result.rows);
 }
 
-// GET /api/student/assignments -> assignments for registered course units
+// GET /api/student/assignments -> assignments for registered courses
 // Includes assignment_type/max_score so the frontend knows whether to show
 // the file/text submit box or the interactive question form, plus whether
 // this student has already submitted/answered it.
 async function myAssignments(req, res) {
   const studentId = await getStudentId(req.user.id);
   const result = await pool.query(
-    `SELECT a.*, cu.name AS course_unit_name,
+    `SELECT a.*, c.title AS course_title, c.code AS course_code,
             sub.id AS submission_id, sub.grade AS submission_grade,
             EXISTS(SELECT 1 FROM student_answers sa
                    JOIN assignment_questions aq ON sa.question_id = aq.id
                    WHERE aq.assignment_id = a.id AND sa.student_id = $1) AS has_answered
      FROM assignments a
-     JOIN course_units cu ON a.course_unit_id = cu.id
-     JOIN registrations r ON r.course_unit_id = cu.id
+     JOIN courses c ON a.course_id = c.id
+     JOIN registrations r ON r.course_id = c.id
      LEFT JOIN submissions sub ON sub.assignment_id = a.id AND sub.student_id = $1
      WHERE r.student_id = $1
      ORDER BY a.due_date`,
@@ -165,10 +164,9 @@ async function myFormScore(req, res) {
 async function myResults(req, res) {
   const studentId = await getStudentId(req.user.id);
   const result = await pool.query(
-    `SELECT res.*, cu.name AS course_unit_name, c.code AS course_code
+    `SELECT res.*, c.title AS course_title, c.code AS course_code
      FROM results res
-     JOIN course_units cu ON res.course_unit_id = cu.id
-     JOIN courses c ON cu.course_id = c.id
+     JOIN courses c ON res.course_id = c.id
      WHERE res.student_id = $1`,
     [studentId]
   );
@@ -176,7 +174,7 @@ async function myResults(req, res) {
 }
 
 module.exports = {
-  availableCourseUnits, registerCourse, myCourses, myAssignments, submitAssignment,
+  availableCourses, registerCourse, myCourses, myAssignments, submitAssignment,
   getAssignmentQuestions, submitAnswers, myFormScore,
   myResults
 };

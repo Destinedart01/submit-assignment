@@ -6,14 +6,14 @@ async function getStaffId(userId) {
   return result.rows[0] ? result.rows[0].id : null;
 }
 
-// GET /api/lecturer/course-units  -> course units this lecturer teaches
-async function myCourseUnits(req, res) {
+// GET /api/lecturer/courses -> courses this lecturer teaches
+async function myCourses(req, res) {
   const staffId = await getStaffId(req.user.id);
   const result = await pool.query(
-    `SELECT cu.*, c.code AS course_code, c.name AS course_name
+    `SELECT c.*, s.name AS semester_name
      FROM teaches t
-     JOIN course_units cu ON t.course_unit_id = cu.id
-     JOIN courses c ON cu.course_id = c.id
+     JOIN courses c ON t.course_id = c.id
+     LEFT JOIN semesters s ON c.semester_id = s.id
      WHERE t.staff_id = $1`,
     [staffId]
   );
@@ -23,19 +23,18 @@ async function myCourseUnits(req, res) {
 // POST /api/lecturer/assignments
 // assignment_type: 'file' (brief + optional attachment, student uploads text/file back)
 //                or 'form' (lecturer builds objective/theory questions, auto-compiled score)
-// A file can optionally be attached either way (the assignment brief/handout).
-// max_score is set here for 'file' type; for 'form' type it is computed from question marks.
+// Due date and max_score are entirely the lecturer's call.
 async function createAssignment(req, res) {
   const staffId = await getStaffId(req.user.id);
-  const { course_unit_id, title, instructions, due_date, assignment_type, max_score } = req.body;
+  const { course_id, title, instructions, due_date, assignment_type, max_score } = req.body;
   const file = req.file;
   const type = assignment_type === 'form' ? 'form' : 'file';
 
   const result = await pool.query(
     `INSERT INTO assignments
-       (course_unit_id, lecturer_id, title, instructions, due_date, assignment_type, max_score, file_path, file_name)
+       (course_id, lecturer_id, title, instructions, due_date, assignment_type, max_score, file_path, file_name)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-    [course_unit_id, staffId, title, instructions, due_date, type,
+    [course_id, staffId, title, instructions, due_date, type,
      type === 'file' ? (max_score || null) : null,
      file ? file.filename : null, file ? file.originalname : null]
   );
@@ -46,8 +45,8 @@ async function createAssignment(req, res) {
 async function myAssignments(req, res) {
   const staffId = await getStaffId(req.user.id);
   const result = await pool.query(
-    `SELECT a.*, cu.name AS course_unit_name FROM assignments a
-     JOIN course_units cu ON a.course_unit_id = cu.id
+    `SELECT a.*, c.code AS course_code, c.title AS course_title FROM assignments a
+     JOIN courses c ON a.course_id = c.id
      WHERE a.lecturer_id = $1 ORDER BY a.due_date`,
     [staffId]
   );
@@ -70,8 +69,8 @@ async function getSubmissions(req, res) {
 
 // PUT /api/lecturer/submissions/:id/grade
 // Marking an assignment submission is entirely the lecturer's call - it is
-// independent of the admin-controlled exam grade scale/pass mark, which only
-// applies to course results (see enterResult below).
+// independent of the admin-controlled grade scale, which only applies to
+// overall course results (see enterResult below).
 async function gradeSubmission(req, res) {
   const { id } = req.params;
   const { grade } = req.body;
@@ -184,14 +183,15 @@ async function getFormScores(req, res) {
   res.json(result.rows);
 }
 
-// ---------- Course results (exam-based, separate from assignment marking) ----------
+// ---------- Course results (separate from assignment marking) ----------
 
-// POST /api/lecturer/results -> enter coursework/exam scores, compute total + letter grade
-// This uses the admin-defined grade scale and is for course results, NOT assignment marking.
+// POST /api/lecturer/results -> enter a score for the course, computes the letter grade
+// This uses the admin-defined grade scale and is for overall course results,
+// NOT assignment marking (which is entirely the lecturer's own call above).
 async function enterResult(req, res) {
   const staffId = await getStaffId(req.user.id);
-  const { student_id, course_unit_id, coursework_score, exam_score } = req.body;
-  const total = Number(coursework_score) + Number(exam_score);
+  const { student_id, course_id, score } = req.body;
+  const total = Number(score);
 
   const scaleResult = await pool.query(
     'SELECT grade FROM grade_scale WHERE $1 BETWEEN lower_bound AND upper_bound',
@@ -200,12 +200,12 @@ async function enterResult(req, res) {
   const grade = scaleResult.rows[0] ? scaleResult.rows[0].grade : 'F';
 
   const result = await pool.query(
-    `INSERT INTO results (student_id, course_unit_id, staff_id, coursework_score, exam_score, total_score, grade)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
-     ON CONFLICT (student_id, course_unit_id)
-     DO UPDATE SET coursework_score = $4, exam_score = $5, total_score = $6, grade = $7, result_date = NOW()
+    `INSERT INTO results (student_id, course_id, staff_id, coursework_score, total_score, grade)
+     VALUES ($1, $2, $3, $4, $4, $5)
+     ON CONFLICT (student_id, course_id)
+     DO UPDATE SET coursework_score = $4, total_score = $4, grade = $5, result_date = NOW()
      RETURNING *`,
-    [student_id, course_unit_id, staffId, coursework_score, exam_score, total, grade]
+    [student_id, course_id, staffId, total, grade]
   );
   res.status(201).json(result.rows[0]);
 }
@@ -224,7 +224,7 @@ async function lookupStudent(req, res) {
 }
 
 module.exports = {
-  myCourseUnits, createAssignment, myAssignments, getSubmissions, gradeSubmission,
+  myCourses, createAssignment, myAssignments, getSubmissions, gradeSubmission,
   addQuestion, getQuestionsForLecturer, deleteQuestion,
   getTheoryAnswers, gradeAnswer, getFormScores,
   enterResult, lookupStudent

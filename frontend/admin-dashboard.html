@@ -23,11 +23,10 @@
       <button class="tab-btn" data-tab="departments">Departments</button>
       <button class="tab-btn" data-tab="programs">Programs</button>
       <button class="tab-btn" data-tab="calendar">Academic Calendar</button>
-      <button class="tab-btn" data-tab="courses">Courses & Units</button>
+      <button class="tab-btn" data-tab="courses">Courses</button>
       <button class="tab-btn" data-tab="lecturers">Lecturers</button>
       <button class="tab-btn" data-tab="teaches">Assign Lecturer</button>
       <button class="tab-btn" data-tab="students">Students</button>
-      <button class="tab-btn" data-tab="settings">Deadlines & Pass Mark</button>
     </div>
 
     <div id="msg" class="msg" style="display:none;"></div>
@@ -89,37 +88,26 @@
       <table><thead><tr><th>ID</th><th>Name</th><th>Actions</th></tr></thead><tbody id="semesterTable"></tbody></table>
     </div>
 
-    <!-- Courses & Units -->
+    <!-- Courses -->
     <div class="tab-panel panel" id="tab-courses" style="display:none;">
       <h2>Courses</h2>
       <form id="courseForm">
         <div class="field-row">
-          <div><label>Faculty</label><select id="courseFacultySel"></select></div>
-          <div><label>Department</label><select id="courseDeptSel"></select></div>
+          <div><label>Faculty</label><select id="courseFacultySel" required></select></div>
+          <div><label>Department</label><select id="courseDeptSel" required></select></div>
         </div>
         <div class="field-row">
-          <div><label>Code (e.g. CIT101)</label><input type="text" id="courseCode" required></div>
-          <div><label>Name</label><input type="text" id="courseName" required></div>
+          <div><label>Course code (e.g. CSC101)</label><input type="text" id="courseCode" required></div>
+          <div><label>Course title</label><input type="text" id="courseTitle" required></div>
         </div>
-        <div class="field-row">
-          <div><label>Duration (e.g. 2 years)</label><input type="text" id="courseDuration"></div>
-          <div><label>Tuition</label><input type="number" step="0.01" id="courseTuition"></div>
-        </div>
+        <label>Semester</label>
+        <select id="courseSemesterSel" required></select>
         <button class="primary" type="submit" id="courseSubmitBtn">Add course</button> <button type="button" id="courseCancelBtn" style="display:none;" onclick="cancelEdit('course')">Cancel</button>
       </form>
-      <table><thead><tr><th>Code</th><th>Name</th><th>Faculty</th><th>Dept</th><th>Actions</th></tr></thead><tbody id="courseTable"></tbody></table>
-
-      <h2 style="margin-top:28px;">Course Units</h2>
-      <form id="unitForm">
-        <div class="field-row">
-          <div><label>Course</label><select id="unitCourseSel" required></select></div>
-          <div><label>Semester</label><select id="unitSemesterSel" required></select></div>
-        </div>
-        <label>Unit name</label>
-        <input type="text" id="unitName" required>
-        <button class="primary" type="submit" id="unitSubmitBtn">Add course unit</button> <button type="button" id="unitCancelBtn" style="display:none;" onclick="cancelEdit('unit')">Cancel</button>
-      </form>
-      <table><thead><tr><th>ID</th><th>Unit</th><th>Course</th><th>Semester</th><th>Actions</th></tr></thead><tbody id="unitTable"></tbody></table>
+      <table>
+        <thead><tr><th>Code</th><th>Title</th><th>Faculty</th><th>Dept</th><th>Semester</th><th>Actions</th></tr></thead>
+        <tbody id="courseTable"></tbody>
+      </table>
     </div>
 
     <!-- Lecturers -->
@@ -143,19 +131,19 @@
       <table><thead><tr><th>ID</th><th>Name</th><th>Username</th><th>Actions</th></tr></thead><tbody id="lecturerTable"></tbody></table>
     </div>
 
-    <!-- Assign lecturer to course unit -->
+    <!-- Assign lecturer to course -->
     <div class="tab-panel panel" id="tab-teaches" style="display:none;">
-      <h2>Assign Lecturer to Course Unit</h2>
+      <h2>Assign Lecturer to Course</h2>
       <form id="teachesForm">
         <label>Lecturer</label>
         <select id="teachesLecturerSel" required></select>
-        <label>Course unit</label>
-        <select id="teachesUnitSel" required></select>
+        <label>Course</label>
+        <select id="teachesCourseSel" required></select>
         <button class="primary" type="submit">Assign</button>
       </form>
 
       <h2 style="margin-top:28px;">Current Assignments</h2>
-      <table><thead><tr><th>Lecturer</th><th>Course</th><th>Unit</th><th>Actions</th></tr></thead><tbody id="teachesTable"></tbody></table>
+      <table><thead><tr><th>Lecturer</th><th>Course</th><th>Actions</th></tr></thead><tbody id="teachesTable"></tbody></table>
     </div>
 
     <!-- Students -->
@@ -165,26 +153,6 @@
         <thead><tr><th>Student No</th><th>Name</th><th>Faculty</th><th>Department</th><th>Actions</th></tr></thead>
         <tbody id="studentTable"></tbody>
       </table>
-    </div>
-
-    <!-- Settings -->
-    <div class="tab-panel panel" id="tab-settings" style="display:none;">
-      <h2>Registration Deadline</h2>
-      <form id="deadlineForm">
-        <div class="field-row">
-          <div><label>Academic year</label><select id="deadlineYearSel" required></select></div>
-          <div><label>Semester</label><select id="deadlineSemesterSel" required></select></div>
-          <div><label>Deadline date</label><input type="date" id="deadlineDate" required></div>
-        </div>
-        <button class="primary" type="submit">Set deadline</button>
-      </form>
-
-      <h2 style="margin-top:28px;">Pass Mark</h2>
-      <form id="passMarkForm">
-        <label>Pass mark</label>
-        <input type="number" step="0.01" id="passMarkValue" required value="40">
-        <button class="primary" type="submit">Set pass mark</button>
-      </form>
     </div>
   </div>
 

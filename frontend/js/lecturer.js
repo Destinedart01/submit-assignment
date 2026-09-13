@@ -30,9 +30,9 @@ document.getElementById('qType').addEventListener('change', e => {
 
 // ---------- Course units this lecturer teaches ----------
 async function loadUnits() {
-  const rows = await apiRequest('/lecturer/course-units');
-  fill(document.getElementById('unitSel'), rows, r => `${r.course_code} - ${r.name}`, 'Select course unit');
-  fill(document.getElementById('resultUnitSel'), rows, r => `${r.course_code} - ${r.name}`, 'Select course unit');
+  const rows = await apiRequest('/lecturer/courses');
+  fill(document.getElementById('unitSel'), rows, r => `${r.code} - ${r.title}`, 'Select course');
+  fill(document.getElementById('resultUnitSel'), rows, r => `${r.code} - ${r.title}`, 'Select course');
 }
 
 // ---------- Assignments ----------
@@ -43,7 +43,7 @@ async function loadAssignments() {
     const manageBtn = a.assignment_type === 'form'
       ? `<button class="primary" style="margin:0; padding:6px 10px;" onclick="openQuestionBuilder(${a.id}, '${a.title.replace(/'/g, "\\'")}')">Manage Questions</button>`
       : '';
-    return row([a.title, a.course_unit_name, typeLabel, new Date(a.due_date).toLocaleString(), manageBtn]);
+    return row([a.title, `${a.course_code} - ${a.course_title}`, typeLabel, new Date(a.due_date).toLocaleString(), manageBtn]);
   }).join('');
   fill(document.getElementById('submissionAssignmentSel'),
     rows.filter(a => a.assignment_type === 'file'), r => r.title, 'Select assignment');
@@ -54,7 +54,7 @@ async function loadAssignments() {
 document.getElementById('assignmentForm').addEventListener('submit', async e => {
   e.preventDefault();
   const formData = new FormData();
-  formData.append('course_unit_id', document.getElementById('unitSel').value);
+  formData.append('course_id', document.getElementById('unitSel').value);
   formData.append('title', document.getElementById('title').value);
   formData.append('instructions', document.getElementById('instructions').value);
   formData.append('due_date', document.getElementById('dueDate').value);
@@ -209,9 +209,8 @@ document.getElementById('resultForm').addEventListener('submit', async e => {
       method: 'POST',
       body: {
         student_id: student.id,
-        course_unit_id: document.getElementById('resultUnitSel').value,
-        coursework_score: document.getElementById('courseworkScore').value,
-        exam_score: document.getElementById('examScore').value
+        course_id: document.getElementById('resultUnitSel').value,
+        score: document.getElementById('courseworkScore').value
       }
     });
     document.getElementById('resultForm').reset();

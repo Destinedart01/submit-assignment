@@ -31,7 +31,7 @@
     <div class="tab-panel panel" id="tab-assignments">
       <h2>Create Assignment</h2>
       <form id="assignmentForm">
-        <label>Course unit</label>
+        <label>Course</label>
         <select id="unitSel" required></select>
 
         <label>Title</label>
@@ -65,7 +65,7 @@
 
       <h2 style="margin-top:28px;">My Assignments</h2>
       <table>
-        <thead><tr><th>Title</th><th>Course Unit</th><th>Type</th><th>Due</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Title</th><th>Course</th><th>Type</th><th>Due</th><th>Actions</th></tr></thead>
         <tbody id="assignmentTable"></tbody>
       </table>
 
@@ -145,18 +145,16 @@
     <div class="tab-panel panel" id="tab-results" style="display:none;">
       <h2>Enter Course Result</h2>
       <p style="font-size:0.85rem; color:var(--ink-soft);">
-        This is for overall course results (coursework + exam), using the grade scale set by the admin.
+        This is for overall course results, using the grade scale set by the admin.
         It is separate from assignment marking above, which is entirely your own call.
       </p>
       <form id="resultForm">
-        <label>Course unit</label>
+        <label>Course</label>
         <select id="resultUnitSel" required></select>
         <label>Student number</label>
         <input type="text" id="resultStudentNo" required placeholder="e.g. FPI/CIT/2024/001">
-        <div class="field-row">
-          <div><label>Coursework score</label><input type="number" step="0.01" id="courseworkScore" required></div>
-          <div><label>Exam score</label><input type="number" step="0.01" id="examScore" required></div>
-        </div>
+        <label>Score</label>
+        <input type="number" step="0.01" id="courseworkScore" required>
         <button class="primary" type="submit">Save result</button>
       </form>
     </div>

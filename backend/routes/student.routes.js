@@ -7,7 +7,7 @@ const student = require('../controllers/student.controller');
 
 router.use(verifyToken, requireRole('student'));
 
-router.get('/course-units', asyncHandler(student.availableCourseUnits));
+router.get('/courses', asyncHandler(student.availableCourses));
 router.post('/register-course', asyncHandler(student.registerCourse));
 router.get('/my-courses', asyncHandler(student.myCourses));
 

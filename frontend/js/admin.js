@@ -17,13 +17,13 @@ function fill(sel, rows, labelFn, placeholder) {
 function esc(s) { return (s ?? '').toString().replace(/'/g, "\\'"); }
 
 // Tracks which row (if any) is currently being edited, per entity key.
-const editing = { faculty: null, department: null, program: null, year: null, semester: null, course: null, unit: null, lecturer: null };
+const editing = { faculty: null, department: null, program: null, year: null, semester: null, course: null, lecturer: null };
 
 function setEditMode(entity, isEditing) {
   document.getElementById(entity + 'SubmitBtn').textContent = isEditing ? 'Save changes' : {
     faculty: 'Add faculty', department: 'Add department', program: 'Add program',
     year: 'Add academic year', semester: 'Add semester', course: 'Add course',
-    unit: 'Add course unit', lecturer: 'Register lecturer'
+    lecturer: 'Register lecturer'
   }[entity];
   document.getElementById(entity + 'CancelBtn').style.display = isEditing ? 'inline-block' : 'none';
 }
@@ -31,6 +31,7 @@ function cancelEdit(entity) {
   editing[entity] = null;
   setEditMode(entity, false);
   document.getElementById(entity + 'Form').reset();
+  if (entity === 'lecturer') document.getElementById('lecUsername').disabled = false;
 }
 
 async function confirmDelete(label) {
@@ -171,7 +172,6 @@ async function loadYears() {
     y.id, y.name, y.start_date || '', y.end_date || '',
     actionsCell(`editYear(${y.id}, '${esc(y.name)}', '${y.start_date || ''}', '${y.end_date || ''}')`, `deleteYear(${y.id})`)
   ])).join('');
-  fill(document.getElementById('deadlineYearSel'), rows, r => r.name, 'Select year');
   return rows;
 }
 function editYear(id, name, start, end) {
@@ -216,8 +216,7 @@ async function loadSemesters() {
   document.getElementById('semesterTable').innerHTML = rows.map(s => row([
     s.id, s.name, actionsCell(`editSemester(${s.id}, '${esc(s.name)}')`, `deleteSemester(${s.id})`)
   ])).join('');
-  fill(document.getElementById('unitSemesterSel'), rows, r => r.name, 'Select semester');
-  fill(document.getElementById('deadlineSemesterSel'), rows, r => r.name, 'Select semester');
+  fill(document.getElementById('courseSemesterSel'), rows, r => r.name, 'Select semester');
   return rows;
 }
 function editSemester(id, name) {
@@ -251,27 +250,26 @@ document.getElementById('semesterForm').addEventListener('submit', async e => {
   } catch (err) { showMsg(msg, err.message, true); }
 });
 
-// ---------- Courses & units ----------
+// ---------- Courses (faculty + department + code + title + semester) ----------
 async function loadCourses() {
   const rows = await apiRequest('/admin/courses');
   document.getElementById('courseTable').innerHTML = rows.map(c => row([
-    c.code, c.name, c.faculty_name || '-', c.department_name || '-',
+    c.code, c.title, c.faculty_name || '-', c.department_name || '-', c.semester_name || '-',
     actionsCell(
-      `editCourse(${c.id}, '${esc(c.code)}', '${esc(c.name)}', ${c.faculty_id || 'null'}, ${c.department_id || 'null'}, '${esc(c.duration)}', ${c.tuition || 0})`,
+      `editCourse(${c.id}, '${esc(c.code)}', '${esc(c.title)}', ${c.faculty_id || 'null'}, ${c.department_id || 'null'}, ${c.semester_id || 'null'})`,
       `deleteCourse(${c.id})`
     )
   ])).join('');
-  fill(document.getElementById('unitCourseSel'), rows, r => `${r.code} - ${r.name}`, 'Select course');
+  fill(document.getElementById('teachesCourseSel'), rows, r => `${r.code} - ${r.title}`, 'Select course');
   return rows;
 }
-function editCourse(id, code, name, facultyId, deptId, duration, tuition) {
+function editCourse(id, code, title, facultyId, deptId, semesterId) {
   editing.course = id;
   document.getElementById('courseCode').value = code;
-  document.getElementById('courseName').value = name;
+  document.getElementById('courseTitle').value = title;
   if (facultyId) document.getElementById('courseFacultySel').value = facultyId;
   if (deptId) document.getElementById('courseDeptSel').value = deptId;
-  document.getElementById('courseDuration').value = duration;
-  document.getElementById('courseTuition').value = tuition;
+  if (semesterId) document.getElementById('courseSemesterSel').value = semesterId;
   setEditMode('course', true);
   document.getElementById('tab-courses').scrollIntoView({ behavior: 'smooth' });
 }
@@ -289,9 +287,8 @@ document.getElementById('courseForm').addEventListener('submit', async e => {
     faculty_id: document.getElementById('courseFacultySel').value || null,
     department_id: document.getElementById('courseDeptSel').value || null,
     code: document.getElementById('courseCode').value,
-    name: document.getElementById('courseName').value,
-    duration: document.getElementById('courseDuration').value,
-    tuition: document.getElementById('courseTuition').value || 0
+    title: document.getElementById('courseTitle').value,
+    semester_id: document.getElementById('courseSemesterSel').value || null
   };
   try {
     if (editing.course) {
@@ -304,52 +301,6 @@ document.getElementById('courseForm').addEventListener('submit', async e => {
       showMsg(msg, 'Course added.');
     }
     loadCourses();
-  } catch (err) { showMsg(msg, err.message, true); }
-});
-
-async function loadUnits() {
-  const rows = await apiRequest('/admin/course-units');
-  document.getElementById('unitTable').innerHTML = rows.map(u => row([
-    u.id, u.name, u.course_code, u.semester_name,
-    actionsCell(`editUnit(${u.id}, '${esc(u.name)}', ${u.course_id}, ${u.semester_id})`, `deleteUnit(${u.id})`)
-  ])).join('');
-  fill(document.getElementById('teachesUnitSel'), rows, r => `${r.course_code} - ${r.name}`, 'Select course unit');
-  return rows;
-}
-function editUnit(id, name, courseId, semesterId) {
-  editing.unit = id;
-  document.getElementById('unitName').value = name;
-  document.getElementById('unitCourseSel').value = courseId;
-  document.getElementById('unitSemesterSel').value = semesterId;
-  setEditMode('unit', true);
-  document.getElementById('tab-courses').scrollIntoView({ behavior: 'smooth' });
-}
-async function deleteUnit(id) {
-  if (!(await confirmDelete('course unit'))) return;
-  try {
-    await apiRequest(`/admin/course-units/${id}`, { method: 'DELETE' });
-    showMsg(msg, 'Course unit deleted.');
-    loadUnits();
-  } catch (err) { showMsg(msg, err.message, true); }
-}
-document.getElementById('unitForm').addEventListener('submit', async e => {
-  e.preventDefault();
-  const body = {
-    course_id: document.getElementById('unitCourseSel').value,
-    semester_id: document.getElementById('unitSemesterSel').value,
-    name: document.getElementById('unitName').value
-  };
-  try {
-    if (editing.unit) {
-      await apiRequest(`/admin/course-units/${editing.unit}`, { method: 'PUT', body });
-      showMsg(msg, 'Course unit updated.');
-      cancelEdit('unit');
-    } else {
-      await apiRequest('/admin/course-units', { method: 'POST', body });
-      document.getElementById('unitName').value = '';
-      showMsg(msg, 'Course unit added.');
-    }
-    loadUnits();
   } catch (err) { showMsg(msg, err.message, true); }
 });
 
@@ -409,7 +360,7 @@ document.getElementById('lecturerForm').addEventListener('submit', async e => {
 async function loadTeaches() {
   const rows = await apiRequest('/admin/teaches');
   document.getElementById('teachesTable').innerHTML = rows.map(t => row([
-    t.lecturer_name, t.course_code, t.unit_name,
+    t.lecturer_name, `${t.course_code} - ${t.course_title}`,
     `<button style="margin:0; padding:5px 10px; background:var(--danger); color:#fff; border:none; border-radius:3px; cursor:pointer;" onclick="deleteTeaches(${t.id})">Remove</button>`
   ])).join('');
 }
@@ -428,10 +379,10 @@ document.getElementById('teachesForm').addEventListener('submit', async e => {
       method: 'POST',
       body: {
         staff_id: document.getElementById('teachesLecturerSel').value,
-        course_unit_id: document.getElementById('teachesUnitSel').value
+        course_id: document.getElementById('teachesCourseSel').value
       }
     });
-    showMsg(msg, 'Lecturer assigned to course unit.');
+    showMsg(msg, 'Lecturer assigned to course.');
     loadTeaches();
   } catch (err) { showMsg(msg, err.message, true); }
 });
@@ -453,32 +404,6 @@ async function deleteStudent(id) {
   } catch (err) { showMsg(msg, err.message, true); }
 }
 
-// ---------- Deadlines & pass mark ----------
-document.getElementById('deadlineForm').addEventListener('submit', async e => {
-  e.preventDefault();
-  try {
-    await apiRequest('/admin/registration-deadlines', {
-      method: 'POST',
-      body: {
-        academic_year_id: document.getElementById('deadlineYearSel').value,
-        semester_id: document.getElementById('deadlineSemesterSel').value,
-        deadline_date: document.getElementById('deadlineDate').value
-      }
-    });
-    showMsg(msg, 'Deadline set.');
-  } catch (err) { showMsg(msg, err.message, true); }
-});
-document.getElementById('passMarkForm').addEventListener('submit', async e => {
-  e.preventDefault();
-  try {
-    await apiRequest('/admin/pass-marks', {
-      method: 'POST',
-      body: { pass_mark: document.getElementById('passMarkValue').value }
-    });
-    showMsg(msg, 'Pass mark updated.');
-  } catch (err) { showMsg(msg, err.message, true); }
-});
-
 // ---------- Initial load ----------
 (async function init() {
   await loadFaculties();
@@ -487,7 +412,6 @@ document.getElementById('passMarkForm').addEventListener('submit', async e => {
   await loadYears();
   await loadSemesters();
   await loadCourses();
-  await loadUnits();
   await loadLecturers();
   await loadTeaches();
   await loadStudents();

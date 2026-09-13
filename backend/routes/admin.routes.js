@@ -36,11 +36,6 @@ router.get('/courses', asyncHandler(admin.getCourses));
 router.put('/courses/:id', asyncHandler(admin.updateCourse));
 router.delete('/courses/:id', asyncHandler(admin.deleteCourse));
 
-router.post('/course-units', asyncHandler(admin.createCourseUnit));
-router.get('/course-units', asyncHandler(admin.getCourseUnits));
-router.put('/course-units/:id', asyncHandler(admin.updateCourseUnit));
-router.delete('/course-units/:id', asyncHandler(admin.deleteCourseUnit));
-
 router.post('/lecturers', asyncHandler(admin.registerLecturer));
 router.get('/lecturers', asyncHandler(admin.getLecturers));
 router.put('/lecturers/:id', asyncHandler(admin.updateLecturer));
@@ -49,9 +44,6 @@ router.delete('/lecturers/:id', asyncHandler(admin.deleteLecturer));
 router.post('/teaches', asyncHandler(admin.assignTeaches));
 router.get('/teaches', asyncHandler(admin.getTeaches));
 router.delete('/teaches/:id', asyncHandler(admin.deleteTeaches));
-
-router.post('/registration-deadlines', asyncHandler(admin.setRegistrationDeadline));
-router.post('/pass-marks', asyncHandler(admin.setPassMark));
 
 router.get('/students', asyncHandler(admin.getStudents));
 router.delete('/students/:id', asyncHandler(admin.deleteStudent));

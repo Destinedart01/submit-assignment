@@ -7,7 +7,7 @@ const lecturer = require('../controllers/lecturer.controller');
 
 router.use(verifyToken, requireRole('lecturer'));
 
-router.get('/course-units', asyncHandler(lecturer.myCourseUnits));
+router.get('/courses', asyncHandler(lecturer.myCourses));
 
 router.post('/assignments', upload.single('file'), asyncHandler(lecturer.createAssignment));
 router.get('/assignments', asyncHandler(lecturer.myAssignments));
