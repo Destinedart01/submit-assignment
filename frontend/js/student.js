@@ -62,7 +62,7 @@ async function loadAssignments() {
       actionBtn = `<button class="primary" style="margin:0; padding:6px 10px;" onclick="openSubmit(${a.id}, '${a.title.replace(/'/g, "\\'")}')">${a.submission_id ? 'Resubmit' : 'Submit'}</button>`;
     } else {
       status = a.has_answered ? 'Answered' : 'Not answered';
-      actionBtn = `<button class="primary" style="margin:0; padding:6px 10px;" onclick="openForm(${a.id}, '${a.title.replace(/'/g, "\\'")}')">${a.has_answered ? 'View / Retake' : 'Answer'}</button>`;
+      actionBtn = `<button class="primary" style="margin:0; padding:6px 10px;" onclick="openForm(${a.id}, '${a.title.replace(/'/g, "\\'")}', ${a.has_answered})">${a.has_answered ? 'View' : 'Answer'}</button>`;
     }
     const brief = a.file_name ? ` <a href="/uploads/${a.file_path}" target="_blank">(brief: ${a.file_name})</a>` : '';
     return row([a.title + brief, `${a.course_code} - ${a.course_title}`, new Date(a.due_date).toLocaleString(), status, actionBtn]);
@@ -103,35 +103,68 @@ document.getElementById('submitForm').addEventListener('submit', async e => {
 });
 
 // ---------- Interactive form answering ----------
-async function openForm(assignmentId, title) {
+async function openForm(assignmentId, title, hasAnswered) {
   currentFormAssignmentId = assignmentId;
   document.getElementById('submitBox').style.display = 'none';
-  document.getElementById('formBoxTitle').textContent = 'Answer: ' + title;
+  document.getElementById('formBoxTitle').textContent = (hasAnswered ? 'Answers: ' : 'Answer: ') + title;
   document.getElementById('formBox').style.display = 'block';
   document.getElementById('formResultBox').style.display = 'none';
   document.getElementById('formBox').scrollIntoView({ behavior: 'smooth' });
 
-  const questions = await apiRequest(`/student/assignments/${assignmentId}/questions`);
-  document.getElementById('questionsContainer').innerHTML = questions.map((q, i) => {
-    if (q.question_type === 'objective') {
+  const answerFormEl = document.getElementById('answerForm');
+
+  if (hasAnswered) {
+    // Read-only: show exactly what was submitted, no inputs, no submit button.
+    const rows = await apiRequest(`/student/assignments/${assignmentId}/answers`);
+    document.getElementById('questionsContainer').innerHTML = rows.map((q, i) => {
+      if (q.question_type === 'objective') {
+        const optionsHtml = ['A', 'B', 'C', 'D'].map(letter => {
+          const optText = q['option_' + letter.toLowerCase()];
+          if (!optText) return '';
+          const isChosen = q.selected_option === letter;
+          return `<div class="option-row" style="cursor:default;${isChosen ? ' background:#eaf5ea; border-color:#b7ddb9; font-weight:600;' : ''}">
+                    <span>${isChosen ? '●' : '○'}</span><span>${letter}. ${optText}</span>
+                  </div>`;
+        }).join('');
+        return `
+          <div class="question-block">
+            <p class="question-stem">${i + 1}. ${q.question_text} <span class="marks-tag">(${q.marks} mark${q.marks == 1 ? '' : 's'})</span></p>
+            <div class="option-list">${optionsHtml}</div>
+          </div>`;
+      }
       return `
-        <div style="margin-bottom:16px;">
-          <label>${i + 1}. ${q.question_text} (${q.marks} mark${q.marks == 1 ? '' : 's'})</label>
-          ${['A', 'B', 'C', 'D'].map(letter => {
-            const optText = q['option_' + letter.toLowerCase()];
-            if (!optText) return '';
-            return `<div><label style="display:inline-flex; align-items:center; gap:6px; font-size:0.95rem; color:var(--ink);">
-                      <input type="radio" name="q-${q.id}" value="${letter}"> ${letter}. ${optText}
-                    </label></div>`;
-          }).join('')}
+        <div class="question-block">
+          <p class="question-stem">${i + 1}. ${q.question_text} <span class="marks-tag">(${q.marks} mark${q.marks == 1 ? '' : 's'})</span></p>
+          <div class="modal-text" style="background:#f7fbf7; padding:10px 12px; border-radius:3px; border:1px solid #e4f0e4;">${(q.answer_text || '').replace(/</g, '&lt;')}</div>
         </div>`;
-    }
-    return `
-      <div style="margin-bottom:16px;">
-        <label>${i + 1}. ${q.question_text} (${q.marks} mark${q.marks == 1 ? '' : 's'})</label>
-        <textarea name="q-${q.id}" data-theory="1"></textarea>
-      </div>`;
-  }).join('');
+    }).join('');
+    answerFormEl.style.display = 'none';
+  } else {
+    answerFormEl.style.display = 'block';
+    const questions = await apiRequest(`/student/assignments/${assignmentId}/questions`);
+    document.getElementById('questionsContainer').innerHTML = questions.map((q, i) => {
+      if (q.question_type === 'objective') {
+        const optionsHtml = ['A', 'B', 'C', 'D'].map(letter => {
+          const optText = q['option_' + letter.toLowerCase()];
+          if (!optText) return '';
+          return `<label class="option-row">
+                    <input type="radio" name="q-${q.id}" value="${letter}">
+                    <span>${letter}. ${optText}</span>
+                  </label>`;
+        }).join('');
+        return `
+          <div class="question-block">
+            <p class="question-stem">${i + 1}. ${q.question_text} <span class="marks-tag">(${q.marks} mark${q.marks == 1 ? '' : 's'})</span></p>
+            <div class="option-list">${optionsHtml}</div>
+          </div>`;
+      }
+      return `
+        <div class="question-block">
+          <p class="question-stem">${i + 1}. ${q.question_text} <span class="marks-tag">(${q.marks} mark${q.marks == 1 ? '' : 's'})</span></p>
+          <textarea name="q-${q.id}" data-theory="1"></textarea>
+        </div>`;
+    }).join('');
+  }
 
   // Show compiled score if already answered
   try {
@@ -166,7 +199,7 @@ document.getElementById('answerForm').addEventListener('submit', async e => {
     });
     showMsg(msg, 'Answers submitted.');
     loadAssignments();
-    openForm(currentFormAssignmentId, document.getElementById('formBoxTitle').textContent.replace('Answer: ', ''));
+    openForm(currentFormAssignmentId, document.getElementById('formBoxTitle').textContent.replace('Answer: ', ''), true);
   } catch (err) { showMsg(msg, err.message, true); }
 });
 

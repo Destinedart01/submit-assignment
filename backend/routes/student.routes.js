@@ -16,6 +16,7 @@ router.post('/assignments/:id/submit', upload.single('file'), asyncHandler(stude
 
 // Interactive form-based assignments
 router.get('/assignments/:id/questions', asyncHandler(student.getAssignmentQuestions));
+router.get('/assignments/:id/answers', asyncHandler(student.getMyAnswers));
 router.post('/assignments/:id/answers', asyncHandler(student.submitAnswers));
 router.get('/assignments/:id/my-score', asyncHandler(student.myFormScore));
 

@@ -95,16 +95,47 @@ async function getAssignmentQuestions(req, res) {
   res.json(result.rows);
 }
 
+// GET /api/student/assignments/:id/answers -> this student's own previously-submitted answers
+// (used to render a read-only view once they've already answered - no resubmission allowed)
+async function getMyAnswers(req, res) {
+  const studentId = await getStudentId(req.user.id);
+  const { id } = req.params;
+  const result = await pool.query(
+    `SELECT aq.id AS question_id, aq.question_text, aq.question_type, aq.marks,
+            aq.option_a, aq.option_b, aq.option_c, aq.option_d,
+            sa.selected_option, sa.answer_text, sa.score_awarded, sa.graded
+     FROM assignment_questions aq
+     LEFT JOIN student_answers sa ON sa.question_id = aq.id AND sa.student_id = $2
+     WHERE aq.assignment_id = $1
+     ORDER BY aq.id`,
+    [id, studentId]
+  );
+  res.json(result.rows);
+}
+
 // POST /api/student/assignments/:id/answers
 // body: { answers: [ { question_id, selected_option? , answer_text? } ] }
 // Objective answers are auto-graded here; theory answers are left ungraded
 // for the lecturer to score later.
+// Once a student has answered any question of this assignment, further
+// submissions are rejected - no resubmission/retake is allowed.
 async function submitAnswers(req, res) {
   const studentId = await getStudentId(req.user.id);
+  const { id } = req.params;
   const { answers } = req.body;
 
   if (!Array.isArray(answers) || answers.length === 0) {
     return res.status(400).json({ message: 'No answers were provided.' });
+  }
+
+  const already = await pool.query(
+    `SELECT 1 FROM student_answers sa
+     JOIN assignment_questions aq ON sa.question_id = aq.id
+     WHERE aq.assignment_id = $1 AND sa.student_id = $2 LIMIT 1`,
+    [id, studentId]
+  );
+  if (already.rows.length > 0) {
+    return res.status(409).json({ message: 'You have already answered this assignment. Answers cannot be changed once submitted.' });
   }
 
   const client = await pool.connect();
@@ -129,8 +160,7 @@ async function submitAnswers(req, res) {
       await client.query(
         `INSERT INTO student_answers (question_id, student_id, selected_option, answer_text, score_awarded, graded)
          VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT (question_id, student_id)
-         DO UPDATE SET selected_option = $3, answer_text = $4, score_awarded = $5, graded = $6, answered_at = NOW()`,
+         ON CONFLICT (question_id, student_id) DO NOTHING`,
         [ans.question_id, studentId, ans.selected_option || null, ans.answer_text || null, scoreAwarded, graded]
       );
     }
@@ -175,6 +205,6 @@ async function myResults(req, res) {
 
 module.exports = {
   availableCourses, registerCourse, myCourses, myAssignments, submitAssignment,
-  getAssignmentQuestions, submitAnswers, myFormScore,
+  getAssignmentQuestions, getMyAnswers, submitAnswers, myFormScore,
   myResults
 };
